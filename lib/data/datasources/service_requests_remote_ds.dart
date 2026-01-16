@@ -106,6 +106,7 @@ class ServiceRequestsRemoteDataSource {
   }
 
   /// Obtener solicitudes cercanas (para técnicos)
+  /// ACTUALIZADO: Usar 'requested_service_type' en lugar de 'service_type'
   Future<List<ServiceRequestModel>> getNearbyServiceRequests({
     required double latitude,
     required double longitude,
@@ -117,7 +118,7 @@ class ServiceRequestsRemoteDataSource {
         'get_nearby_service_requests',
         params: {
           'tech_location': 'POINT($longitude $latitude)',
-          'service_type': serviceType,
+          'requested_service_type': serviceType, // ← CAMBIO IMPORTANTE
           'radius_meters': radiusMeters,
         },
       );
@@ -128,7 +129,7 @@ class ServiceRequestsRemoteDataSource {
           .map((json) => ServiceRequestModel.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      // Si la función RPC no existe, usar filtrado básico
+      // Si la función RPC no existe o falla, usar filtrado básico
       try {
         final response = await _supabase
             .from('service_requests')
@@ -144,6 +145,31 @@ class ServiceRequestsRemoteDataSource {
       } catch (e2) {
         throw Exception('Error al obtener solicitudes cercanas: $e2');
       }
+    }
+  }
+
+  /// Obtener TODAS las solicitudes cercanas (sin filtro de tipo)
+  Future<List<ServiceRequestModel>> getAllNearbyRequests({
+    required double latitude,
+    required double longitude,
+    int radiusMeters = 10000,
+  }) async {
+    try {
+      final response = await _supabase.rpc(
+        'get_all_nearby_requests',
+        params: {
+          'tech_location': 'POINT($longitude $latitude)',
+          'radius_meters': radiusMeters,
+        },
+      );
+
+      if (response == null) return [];
+
+      return (response as List)
+          .map((json) => ServiceRequestModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw Exception('Error al obtener solicitudes cercanas: $e');
     }
   }
 
@@ -249,6 +275,26 @@ class ServiceRequestsRemoteDataSource {
       await _supabase.from('service_requests').delete().eq('id', id);
     } catch (e) {
       throw Exception('Error al eliminar solicitud: $e');
+    }
+  }
+
+  /// Verificar si un técnico puede enviar cotización
+  Future<bool> canTechnicianQuote(String requestId) async {
+    try {
+      final userId = SupabaseConfig.currentUserId;
+      if (userId == null) return false;
+
+      final response = await _supabase.rpc(
+        'can_technician_quote',
+        params: {
+          'tech_id': userId,
+          'request_id': requestId,
+        },
+      );
+
+      return response == true;
+    } catch (e) {
+      return false;
     }
   }
 }
