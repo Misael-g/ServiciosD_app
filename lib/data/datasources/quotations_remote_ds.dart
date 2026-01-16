@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
 import '../models/quotation_model.dart';
 
+/// Fuente de datos remota para cotizaciones
 class QuotationsRemoteDataSource {
   final SupabaseClient _supabase = SupabaseConfig.client;
 
@@ -59,6 +60,54 @@ class QuotationsRemoteDataSource {
           .toList();
     } catch (e) {
       throw Exception('Error al obtener cotizaciones: $e');
+    }
+  }
+
+  /// Obtener cotización por ID
+  Future<QuotationModel> getQuotationById(String quotationId) async {
+    try {
+      final response = await _supabase
+          .from('quotations')
+          .select()
+          .eq('id', quotationId)
+          .single();
+
+      return QuotationModel.fromJson(response);
+    } catch (e) {
+      throw Exception('Error al obtener cotización: $e');
+    }
+  }
+
+  /// Obtener cotizaciones enviadas por un técnico
+  Future<List<QuotationModel>> getQuotationsByTechnician(
+    String technicianId,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('quotations')
+          .select()
+          .eq('technician_id', technicianId)
+          .order('created_at', ascending: false);
+
+      return (response as List)
+          .map((json) => QuotationModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw Exception('Error al obtener cotizaciones del técnico: $e');
+    }
+  }
+
+  /// Obtener mis cotizaciones (técnico actual)
+  Future<List<QuotationModel>> getMyQuotations() async {
+    try {
+      final userId = SupabaseConfig.currentUserId;
+      if (userId == null) {
+        throw Exception('No hay usuario autenticado');
+      }
+
+      return getQuotationsByTechnician(userId);
+    } catch (e) {
+      throw Exception('Error al obtener mis cotizaciones: $e');
     }
   }
 
@@ -120,6 +169,104 @@ class QuotationsRemoteDataSource {
       return QuotationModel.fromJson(response);
     } catch (e) {
       throw Exception('Error al rechazar cotización: $e');
+    }
+  }
+
+  /// Actualizar cotización (Técnico)
+  Future<QuotationModel> updateQuotation({
+    required String quotationId,
+    required double estimatedPrice,
+    required int estimatedDuration,
+    required String description,
+  }) async {
+    try {
+      final response = await _supabase
+          .from('quotations')
+          .update({
+            'estimated_price': estimatedPrice,
+            'estimated_duration': estimatedDuration,
+            'description': description,
+          })
+          .eq('id', quotationId)
+          .select()
+          .single();
+
+      return QuotationModel.fromJson(response);
+    } catch (e) {
+      throw Exception('Error al actualizar cotización: $e');
+    }
+  }
+
+  /// Eliminar cotización (Técnico)
+  Future<void> deleteQuotation(String quotationId) async {
+    try {
+      await _supabase.from('quotations').delete().eq('id', quotationId);
+    } catch (e) {
+      throw Exception('Error al eliminar cotización: $e');
+    }
+  }
+
+  /// Obtener cotización aceptada de una solicitud
+  Future<QuotationModel?> getAcceptedQuotation(String serviceRequestId) async {
+    try {
+      final response = await _supabase
+          .from('quotations')
+          .select()
+          .eq('service_request_id', serviceRequestId)
+          .eq('status', 'accepted')
+          .maybeSingle();
+
+      if (response == null) return null;
+
+      return QuotationModel.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Obtener cotizaciones pendientes de un técnico
+  Future<List<QuotationModel>> getPendingQuotations() async {
+    try {
+      final userId = SupabaseConfig.currentUserId;
+      if (userId == null) {
+        throw Exception('No hay usuario autenticado');
+      }
+
+      final response = await _supabase
+          .from('quotations')
+          .select()
+          .eq('technician_id', userId)
+          .eq('status', 'pending')
+          .order('created_at', ascending: false);
+
+      return (response as List)
+          .map((json) => QuotationModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw Exception('Error al obtener cotizaciones pendientes: $e');
+    }
+  }
+
+  /// Obtener cotizaciones aceptadas de un técnico
+  Future<List<QuotationModel>> getAcceptedQuotations() async {
+    try {
+      final userId = SupabaseConfig.currentUserId;
+      if (userId == null) {
+        throw Exception('No hay usuario autenticado');
+      }
+
+      final response = await _supabase
+          .from('quotations')
+          .select()
+          .eq('technician_id', userId)
+          .eq('status', 'accepted')
+          .order('created_at', ascending: false);
+
+      return (response as List)
+          .map((json) => QuotationModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw Exception('Error al obtener cotizaciones aceptadas: $e');
     }
   }
 }

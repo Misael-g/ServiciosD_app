@@ -6,6 +6,9 @@ import 'data/datasources/profiles_remote_ds.dart';
 import 'data/repositories/auth_repository_impl.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'presentation/auth/login_page.dart';
+import 'presentation/client/main_navigation.dart';
+import 'presentation/technician/main_navigation.dart';
+import 'presentation/admin/main_navigation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -94,26 +97,13 @@ class AuthWrapper extends StatelessWidget {
           final profile = snapshot.data!;
 
           // Redirigir según el rol
-          // TODO: Implementar las navegaciones por rol
           switch (profile.role) {
             case 'client':
-              return const Scaffold(
-                body: Center(
-                  child: Text('Cliente Home - Por implementar'),
-                ),
-              );
+              return const ClientMainNavigation();
             case 'technician':
-              return const Scaffold(
-                body: Center(
-                  child: Text('Técnico Home - Por implementar'),
-                ),
-              );
+              return const TechnicianMainNavigation();
             case 'admin':
-              return const Scaffold(
-                body: Center(
-                  child: Text('Admin Home - Por implementar'),
-                ),
-              );
+              return const AdminMainNavigation();
             default:
               return const LoginPage();
           }
