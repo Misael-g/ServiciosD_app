@@ -106,7 +106,7 @@ class ServiceRequestsRemoteDataSource {
   }
 
   /// Obtener solicitudes cercanas (para técnicos)
-  /// ACTUALIZADO: Usar 'requested_service_type' en lugar de 'service_type'
+  /// CORREGIDO: Usar 'requested_service_type' en lugar de 'service_type'
   Future<List<ServiceRequestModel>> getNearbyServiceRequests({
     required double latitude,
     required double longitude,
@@ -135,7 +135,7 @@ class ServiceRequestsRemoteDataSource {
             .from('service_requests')
             .select()
             .eq('service_type', serviceType)
-            .in_('status', ['pending', 'quotation_sent'])
+            .filter('status', 'in', '(pending,quotation_sent)') // ← CORRECCIÓN: usar filter con 'in'
             .order('created_at', ascending: false)
             .limit(20);
 

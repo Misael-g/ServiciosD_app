@@ -46,7 +46,7 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation> {
     // Si no está verificado, mostrar solo verificación y perfil
     if (_verificationStatus != 'approved') {
       return [
-        const TechnicianVerificationPage(),
+        const VerificationPage(),
         const TechnicianProfilePage(),
       ];
     }
