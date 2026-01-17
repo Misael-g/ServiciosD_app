@@ -23,69 +23,35 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     try {
       print('🟢 [AUTH_REPO] Iniciando proceso de registro');
-      print('   Email: $email');
-      print('   Nombre: $fullName');
-      print('   Rol: $role');
 
-      // PASO 1: Registrar usuario en Supabase Auth
-      print('🟢 [AUTH_REPO] PASO 1: Registrando en Supabase Auth...');
+      // Validar que el rol no sea admin
+      if (role == 'admin') {
+        throw Exception('No puedes registrarte como administrador');
+      }
+
+      // SOLO REGISTRAR EN SUPABASE AUTH - NO OBTENER PERFIL
       await _authDataSource.signUp(
         email: email,
         password: password,
         fullName: fullName,
         role: role,
       );
-      print('✅ [AUTH_REPO] Usuario registrado en Auth');
 
-      // PASO 2: Esperar a que el trigger cree el perfil
-      print('🟢 [AUTH_REPO] PASO 2: Esperando creación del perfil (trigger)...');
-      await Future.delayed(const Duration(milliseconds: 500));
-      print('   Esperando 500ms más...');
-      await Future.delayed(const Duration(milliseconds: 500));
-      print('   Esperando 500ms más...');
-      await Future.delayed(const Duration(milliseconds: 500));
-      print('   Esperando 500ms más...');
-      await Future.delayed(const Duration(milliseconds: 500));
+      print('✅ [AUTH_REPO] Usuario registrado exitosamente');
 
-      // PASO 3: Intentar obtener el perfil creado
-      print('🟢 [AUTH_REPO] PASO 3: Intentando obtener perfil...');
-      
-      int attempts = 0;
-      const maxAttempts = 5;
-      
-      while (attempts < maxAttempts) {
-        attempts++;
-        print('   Intento $attempts/$maxAttempts');
-        
-        try {
-          final profileModel = await _profilesDataSource.getCurrentUserProfile();
-          print('✅ [AUTH_REPO] ¡Perfil obtenido exitosamente!');
-          print('   ID: ${profileModel.id}');
-          print('   Email: ${profileModel.email}');
-          print('   Rol: ${profileModel.role}');
-          
-          return profileModel.toEntity();
-          
-        } catch (e) {
-          print('⚠️ [AUTH_REPO] Intento $attempts falló: $e');
-          
-          if (attempts < maxAttempts) {
-            print('   Esperando 1 segundo antes del siguiente intento...');
-            await Future.delayed(const Duration(seconds: 1));
-          } else {
-            print('❌ [AUTH_REPO] Todos los intentos fallaron');
-            rethrow;
-          }
-        }
-      }
+      // Retornar un perfil vacío/temporal (no se usará)
+      return Profile(
+        id: '',
+        email: email,
+        fullName: fullName,
+        role: role,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
 
-      throw Exception('No se pudo obtener el perfil después de $maxAttempts intentos');
-      
     } catch (e, stackTrace) {
-      print('❌ [AUTH_REPO] Error en signUp:');
-      print('   Error: $e');
-      print('   StackTrace: $stackTrace');
-      throw Exception('Error al registrar usuario: $e');
+      print('❌ [AUTH_REPO] Error en signUp: $e');
+      rethrow;
     }
   }
 

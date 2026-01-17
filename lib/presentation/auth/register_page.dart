@@ -49,18 +49,9 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _handleRegister() async {
-    print('');
-    print('═══════════════════════════════════════════════════════');
-    print('🚀 INICIANDO PROCESO DE REGISTRO');
-    print('═══════════════════════════════════════════════════════');
-    
-    if (!_formKey.currentState!.validate()) {
-      print('❌ Formulario inválido');
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     if (_selectedRole == null) {
-      print('❌ Rol no seleccionado');
       SnackbarHelper.showError(context, 'Selecciona un rol');
       return;
     }
@@ -68,45 +59,22 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = true);
 
     try {
-      final email = _emailController.text.trim();
-      final password = _passwordController.text;
-      final fullName = _fullNameController.text.trim();
-      final role = _selectedRole!;
-
-      print('');
-      print('📋 DATOS DEL FORMULARIO:');
-      print('   Email: $email');
-      print('   Nombre: $fullName');
-      print('   Rol: $role');
-      print('   Contraseña: ${password.length} caracteres');
-      print('');
-
       final authRepository = context.read<AuthRepository>();
       
-      print('⏳ Llamando a authRepository.signUp...');
-      print('');
-      
+      // Solo registrar - no usamos el perfil retornado
       await authRepository.signUp(
-        email: email,
-        password: password,
-        fullName: fullName,
-        role: role,
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        fullName: _fullNameController.text.trim(),
+        role: _selectedRole!,
       );
-
-      print('');
-      print('═══════════════════════════════════════════════════════');
-      print('✅ REGISTRO COMPLETADO EXITOSAMENTE');
-      print('═══════════════════════════════════════════════════════');
-      print('');
 
       if (mounted) {
         final message = _selectedRole == UserRoles.technician
-            ? '¡Cuenta creada! Ahora debes verificar tu perfil'
-            : '¡Cuenta creada exitosamente!';
+            ? '¡Cuenta creada! Revisa tu email para confirmar.'
+            : '¡Cuenta creada! Revisa tu email para confirmar.';
             
         SnackbarHelper.showSuccess(context, message);
-        
-        print('🔄 Navegando al login...');
         
         // Volver al login
         Navigator.of(context).pushAndRemoveUntil(
@@ -115,43 +83,18 @@ class _RegisterPageState extends State<RegisterPage> {
         );
       }
       
-    } catch (e, stackTrace) {
-      print('');
-      print('═══════════════════════════════════════════════════════');
-      print('❌ ERROR EN EL REGISTRO');
-      print('═══════════════════════════════════════════════════════');
-      print('Error: $e');
-      print('');
-      print('StackTrace completo:');
-      print(stackTrace);
-      print('═══════════════════════════════════════════════════════');
-      print('');
-      
+    } catch (e) {
       if (mounted) {
-        // Extraer mensaje de error limpio
         String errorMessage = e.toString();
-        
-        // Si contiene "Exception: ", quitarlo
         if (errorMessage.startsWith('Exception: ')) {
           errorMessage = errorMessage.substring(11);
         }
         
-        // Si contiene "Error al registrar usuario: ", quitarlo también
-        if (errorMessage.startsWith('Error al registrar usuario: ')) {
-          errorMessage = errorMessage.substring(28);
-        }
-        
-        print('💬 Mostrando error al usuario: $errorMessage');
-        
-        SnackbarHelper.showError(
-          context,
-          'Error al crear cuenta: $errorMessage',
-        );
+        SnackbarHelper.showError(context, 'Error al crear cuenta: $errorMessage');
       }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
-        print('✅ Estado de carga finalizado');
       }
     }
   }
