@@ -1,3 +1,4 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/entities/profile.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_ds.dart';
@@ -15,42 +16,68 @@ class AuthRepositoryImpl implements AuthRepository {
         _profilesDataSource = profilesDataSource;
 
   @override
-  Future<Profile> signUp({
+  Future<void> signUp({
     required String email,
     required String password,
     required String fullName,
     required String role,
+    String? phone,
   }) async {
     try {
       print('🟢 [AUTH_REPO] Iniciando proceso de registro');
-
-      // Validar que el rol no sea admin
-      if (role == 'admin') {
-        throw Exception('No puedes registrarte como administrador');
+      print('   Email: $email');
+      print('   Nombre: $fullName');
+      print('   Rol: $role');
+      print('   Teléfono: ${phone ?? "no proporcionado"}');
+      
+      // NUEVO: Verificar si el email ya existe
+      try {
+        final existingUsers = await _profilesDataSource.getProfileByEmail(email);
+        if (existingUsers != null) {
+          print('❌ [AUTH_REPO] Email ya registrado');
+          throw Exception('Este email ya está registrado');
+        }
+      } catch (e) {
+        // Si es error de "no encontrado", está bien (el email no existe)
+        if (!e.toString().contains('no encontrado') && 
+            !e.toString().contains('not found')) {
+          // Si es el error de "ya registrado", relanzar
+          if (e.toString().contains('ya está registrado')) {
+            rethrow;
+          }
+        }
       }
-
-      // SOLO REGISTRAR EN SUPABASE AUTH - NO OBTENER PERFIL
-      await _authDataSource.signUp(
+      
+      print('🔵 [AUTH_REPO] Email disponible, procediendo con registro...');
+      
+      // Crear usuario en Supabase Auth
+      final response = await _authDataSource.signUp(
         email: email,
         password: password,
         fullName: fullName,
         role: role,
+        phone: phone, // ← Asegurarse de pasar phone
       );
 
       print('✅ [AUTH_REPO] Usuario registrado exitosamente');
+      print('   ID: ${response.user?.id}');
 
-      // Retornar un perfil vacío/temporal (no se usará)
-      return Profile(
-        id: '',
-        email: email,
-        fullName: fullName,
-        role: role,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-    } catch (e, stackTrace) {
-      print('❌ [AUTH_REPO] Error en signUp: $e');
+    } on AuthException catch (e) {
+      print('❌ [AUTH_REPO] AuthException: ${e.message}');
+      
+      // Mejorar mensajes de error de Supabase
+      if (e.message.contains('already registered') || 
+          e.message.contains('already been registered')) {
+        throw Exception('Este email ya está registrado');
+      } else if (e.message.contains('Invalid email')) {
+        throw Exception('Email inválido');
+      } else if (e.message.contains('password')) {
+        throw Exception('La contraseña debe tener al menos 6 caracteres');
+      } else {
+        throw Exception(e.message);
+      }
+    } catch (e) {
+      print('❌ [AUTH_REPO] Error: $e');
       rethrow;
     }
   }

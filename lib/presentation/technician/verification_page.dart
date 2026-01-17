@@ -31,7 +31,6 @@ class _VerificationPageState extends State<VerificationPage> {
     DocumentTypes.certificate: null,
   };
 
-  bool _isLoading = false;
   bool _isUploading = false;
   String? _verificationStatus;
   String? _verificationNotes;

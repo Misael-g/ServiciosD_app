@@ -1,12 +1,8 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../core/config/supabase_config.dart';
-
 /// Fuente de datos remota para servicios
 /// 
 /// Este datasource está reservado para funcionalidades futuras
 /// relacionadas con catálogo de servicios, tipos de servicios, etc.
 class ServicesRemoteDataSource {
-  final SupabaseClient _supabase = SupabaseConfig.client;
 
   // TODO: Implementar funcionalidades de catálogo de servicios
   

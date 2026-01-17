@@ -6,6 +6,7 @@ import 'data/datasources/profiles_remote_ds.dart';
 import 'data/repositories/auth_repository_impl.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'presentation/auth/login_page.dart';
+import 'presentation/auth/register_page.dart';
 import 'presentation/client/main_navigation.dart';
 import 'presentation/technician/main_navigation.dart';
 import 'presentation/admin/main_navigation.dart';
@@ -66,16 +67,27 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        home: const AuthWrapper(),
+        // CORRECCIÓN: Usar routes en lugar de solo home
+        initialRoute: '/',
+        routes: {
+          '/': (context) => const AuthWrapper(),
+          '/login': (context) => const LoginPage(),
+          '/register': (context) => const RegisterPage(),
+        },
       ),
     );
   }
 }
 
 /// Wrapper que decide qué pantalla mostrar según el estado de autenticación
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     final authRepository = context.read<AuthRepository>();
@@ -83,6 +95,10 @@ class AuthWrapper extends StatelessWidget {
     return FutureBuilder(
       future: authRepository.getCurrentUserProfile(),
       builder: (context, snapshot) {
+        print('🔍 [AuthWrapper] ConnectionState: ${snapshot.connectionState}');
+        print('🔍 [AuthWrapper] HasData: ${snapshot.hasData}');
+        print('🔍 [AuthWrapper] HasError: ${snapshot.hasError}');
+        
         // Mientras carga, mostrar splash screen
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -92,25 +108,66 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
+        // Si hay error, mostrar login
+        if (snapshot.hasError) {
+          print('❌ [AuthWrapper] Error: ${snapshot.error}');
+          // IMPORTANTE: Usar WidgetsBinding para evitar errores de navegación
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              Navigator.of(context).pushReplacementNamed('/login');
+            }
+          });
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
         // Si hay usuario autenticado
         if (snapshot.hasData && snapshot.data != null) {
           final profile = snapshot.data!;
+          print('✅ [AuthWrapper] Usuario autenticado: ${profile.email}');
+          print('✅ [AuthWrapper] Rol: ${profile.role}');
 
-          // Redirigir según el rol
+          // CORRECCIÓN: Redirigir según el rol sin errores de navegación
+          // Usar addPostFrameCallback para evitar setState durante build
+          Widget targetScreen;
+          
           switch (profile.role) {
             case 'client':
-              return const ClientMainNavigation();
+              targetScreen = const ClientMainNavigation();
+              break;
             case 'technician':
-              return const TechnicianMainNavigation();
+              targetScreen = const TechnicianMainNavigation();
+              break;
             case 'admin':
-              return const AdminMainNavigation();
+              targetScreen = const AdminMainNavigation();
+              break;
             default:
-              return const LoginPage();
+              print('⚠️ [AuthWrapper] Rol desconocido: ${profile.role}');
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  Navigator.of(context).pushReplacementNamed('/login');
+                }
+              });
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
           }
+
+          return targetScreen;
         }
 
         // Si no hay usuario autenticado, mostrar login
-        return const LoginPage();
+        print('ℹ️ [AuthWrapper] No hay usuario autenticado');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            Navigator.of(context).pushReplacementNamed('/login');
+          }
+        });
+        
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
       },
     );
   }

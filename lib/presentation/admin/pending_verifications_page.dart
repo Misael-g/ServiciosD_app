@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
 import '../../data/models/profile_model.dart';
 import '../../core/utils/snackbar_helper.dart';
-import '../../core/constants/verification_states.dart';
 import 'verification_detail_page.dart';
 
 /// Pantalla de verificaciones pendientes

@@ -31,6 +31,26 @@ class ProfilesRemoteDataSource {
     }
   }
 
+  /// Obtener perfil por email
+  Future<ProfileModel?> getProfileByEmail(String email) async {
+    try {
+      final response = await _supabase
+          .from('profiles')
+          .select()
+          .eq('email', email)
+          .maybeSingle(); // ← maybeSingle() permite que sea null si no existe
+
+      if (response == null) {
+        return null;
+      }
+
+      return ProfileModel.fromJson(response);
+    } catch (e) {
+      print('❌ [PROFILES_DS] Error al buscar email: $e');
+      return null;
+    }
+  }
+
   /// Obtener perfil del usuario actual
   Future<ProfileModel> getCurrentUserProfile() async {
     final userId = SupabaseConfig.currentUserId;

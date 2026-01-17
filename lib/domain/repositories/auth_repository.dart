@@ -4,11 +4,12 @@ import '../entities/profile.dart';
 /// Define el contrato que debe cumplir la implementación
 abstract class AuthRepository {
   /// Registrar nuevo usuario
-  Future<Profile> signUp({
+  Future<void> signUp({
     required String email,
     required String password,
     required String fullName,
     required String role,
+    String? phone,
   });
 
   /// Iniciar sesión

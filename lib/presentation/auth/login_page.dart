@@ -32,6 +32,8 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
+      print('🔐 [LOGIN] Iniciando login...');
+      
       final authRepository = context.read<AuthRepository>();
       
       await authRepository.signIn(
@@ -39,14 +41,21 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text,
       );
 
+      print('✅ [LOGIN] Login exitoso');
+
       if (mounted) {
         SnackbarHelper.showSuccess(context, '¡Bienvenido!');
-        // El AuthWrapper se encargará de redirigir
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const Scaffold()),
+        
+        // CORRECCIÓN: Usar Navigator.pushReplacementNamed en lugar de pushReplacement
+        // Esto asegura que el AuthWrapper se reconstruya correctamente
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/',
+          (route) => false, // Eliminar todas las rutas anteriores
         );
       }
     } catch (e) {
+      print('❌ [LOGIN] Error: $e');
+      
       if (mounted) {
         SnackbarHelper.showError(
           context,

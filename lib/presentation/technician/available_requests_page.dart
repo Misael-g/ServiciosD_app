@@ -22,7 +22,6 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
   List<ServiceRequestModel> _requests = [];
   Position? _currentPosition;
   bool _isLoading = true;
-  String _selectedFilter = 'all';
 
   @override
   void initState() {

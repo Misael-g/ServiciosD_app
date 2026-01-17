@@ -59,15 +59,26 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = true);
 
     try {
+      print('📝 [REGISTER] Iniciando registro');
+      print('   Email: ${_emailController.text.trim()}');
+      print('   Nombre: ${_fullNameController.text.trim()}');
+      print('   Rol: $_selectedRole');
+      print('   Teléfono: ${_phoneController.text.trim()}'); // ← LOG AGREGADO
+      
       final authRepository = context.read<AuthRepository>();
       
-      // Solo registrar - no usamos el perfil retornado
+      // CORRECCIÓN: Agregar el parámetro phone
       await authRepository.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         fullName: _fullNameController.text.trim(),
         role: _selectedRole!,
+        phone: _phoneController.text.trim().isEmpty  // ← AGREGADO
+            ? null 
+            : _phoneController.text.trim(),
       );
+
+      print('✅ [REGISTER] Registro exitoso');
 
       if (mounted) {
         final message = _selectedRole == UserRoles.technician
@@ -84,13 +95,24 @@ class _RegisterPageState extends State<RegisterPage> {
       }
       
     } catch (e) {
+      print('❌ [REGISTER] Error: $e');
+      
       if (mounted) {
-        String errorMessage = e.toString();
-        if (errorMessage.startsWith('Exception: ')) {
-          errorMessage = errorMessage.substring(11);
+        String errorMessage = 'Error al registrar: ';
+        
+        // Mejorar mensajes de error
+        if (e.toString().contains('User already registered') || 
+            e.toString().contains('already been registered')) {
+          errorMessage = 'Este email ya está registrado. Intenta iniciar sesión.';
+        } else if (e.toString().contains('Invalid email')) {
+          errorMessage = 'Email inválido';
+        } else if (e.toString().contains('Password')) {
+          errorMessage = 'La contraseña debe tener al menos 6 caracteres';
+        } else {
+          errorMessage += e.toString().replaceAll('Exception: ', '');
         }
         
-        SnackbarHelper.showError(context, 'Error al crear cuenta: $errorMessage');
+        SnackbarHelper.showError(context, errorMessage);
       }
     } finally {
       if (mounted) {
