@@ -5,6 +5,7 @@ import '../../core/utils/validators.dart';
 import '../../core/constants/verification_states.dart';
 import '../../domain/repositories/auth_repository.dart';
 import 'role_selection_page.dart';
+import 'login_page.dart';
 
 class RegisterPage extends StatefulWidget {
   final String? selectedRole;
@@ -75,9 +76,9 @@ class _RegisterPageState extends State<RegisterPage> {
               : '¡Cuenta creada exitosamente!',
         );
         
-        // Redirigir al home (AuthWrapper se encargará)
+        // Volver al login - el AuthWrapper manejará la redirección automática
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const Scaffold()),
+          MaterialPageRoute(builder: (_) => const LoginPage()),
           (route) => false,
         );
       }
