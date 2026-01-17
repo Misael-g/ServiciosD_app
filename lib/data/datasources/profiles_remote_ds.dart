@@ -201,6 +201,51 @@ class ProfilesRemoteDataSource {
     }
   }
 
+  /// Obtener TODOS los técnicos cercanos (sin filtro de especialidad)
+  Future<List<ProfileModel>> getAllNearbyTechnicians({
+    required double latitude,
+    required double longitude,
+    int radiusMeters = 10000,
+  }) async {
+    try {
+      // Intentar usar función RPC si existe
+      try {
+        final response = await _supabase.rpc(
+          'get_all_nearby_technicians',
+          params: {
+            'client_location': 'POINT($longitude $latitude)',
+            'radius_meters': radiusMeters,
+          },
+        );
+
+        if (response == null) return [];
+
+        return (response as List)
+            .map((json) => ProfileModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } catch (e) {
+        print('⚠️ [PROFILES_DS] Función RPC no disponible, usando filtro básico');
+        
+        // Fallback: Obtener todos los técnicos verificados
+        final response = await _supabase
+            .from('profiles')
+            .select()
+            .eq('role', 'technician')
+            .eq('verification_status', 'approved')
+            .not('latitude', 'is', null)
+            .not('longitude', 'is', null)
+            .limit(50);
+
+        return (response as List)
+            .map((json) => ProfileModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      print('❌ [PROFILES_DS] Error al obtener técnicos: $e');
+      return [];
+    }
+  }
+
   /// Obtener técnicos pendientes de verificación (Solo admin)
   Future<List<ProfileModel>> getPendingVerifications() async {
     try {
