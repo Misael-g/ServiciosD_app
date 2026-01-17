@@ -6,14 +6,6 @@ class AuthRemoteDataSource {
   final SupabaseClient _supabase = SupabaseConfig.client;
 
   /// Registrar nuevo usuario
-  /// 
-  /// [email] - Email del usuario
-  /// [password] - Contraseña
-  /// [fullName] - Nombre completo
-  /// [role] - Rol del usuario ('client' o 'technician')
-  /// 
-  /// El rol se pasa en los metadatos y el trigger en Supabase
-  /// crea automáticamente el perfil con validación
   Future<AuthResponse> signUp({
     required String email,
     required String password,
@@ -21,24 +13,53 @@ class AuthRemoteDataSource {
     required String role,
   }) async {
     try {
+      print('🔵 [AUTH_DS] Iniciando registro...');
+      print('   Email: $email');
+      print('   Nombre: $fullName');
+      print('   Rol: $role');
+
+      // Validar que el rol no sea admin
+      if (role == 'admin') {
+        print('❌ [AUTH_DS] Intento de registro como admin');
+        throw Exception('No puedes registrarte como administrador');
+      }
+
+      print('🔵 [AUTH_DS] Llamando a Supabase signUp...');
+      
       final response = await _supabase.auth.signUp(
         email: email,
         password: password,
         data: {
           'full_name': fullName,
-          'role': role, // El trigger validará que no sea 'admin'
+          'role': role,
         },
       );
 
+      print('🔵 [AUTH_DS] Respuesta de Supabase recibida');
+      print('   User ID: ${response.user?.id}');
+      print('   Email: ${response.user?.email}');
+      print('   Session: ${response.session != null ? "Existe" : "null"}');
+
       if (response.user == null) {
-        throw Exception('Error al crear usuario');
+        print('❌ [AUTH_DS] Usuario es null en la respuesta');
+        throw Exception('Error al crear usuario - respuesta sin usuario');
       }
 
+      print('✅ [AUTH_DS] Usuario creado exitosamente');
+      print('   ID: ${response.user!.id}');
+      
       return response;
+      
     } on AuthException catch (e) {
-      throw Exception('Error de autenticación: ${e.message}');
-    } catch (e) {
-      throw Exception('Error al registrar usuario: $e');
+      print('❌ [AUTH_DS] AuthException capturada:');
+      print('   Mensaje: ${e.message}');
+      print('   StatusCode: ${e.statusCode}');
+      rethrow;
+    } catch (e, stackTrace) {
+      print('❌ [AUTH_DS] Error general capturado:');
+      print('   Error: $e');
+      print('   StackTrace: $stackTrace');
+      rethrow;
     }
   }
 
@@ -48,40 +69,57 @@ class AuthRemoteDataSource {
     required String password,
   }) async {
     try {
+      print('🔵 [AUTH_DS] Iniciando sesión...');
+      print('   Email: $email');
+
       final response = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
+
+      print('✅ [AUTH_DS] Sesión iniciada exitosamente');
+      print('   User ID: ${response.user?.id}');
 
       if (response.user == null) {
         throw Exception('Error al iniciar sesión');
       }
 
       return response;
+      
     } on AuthException catch (e) {
-      throw Exception('Error de autenticación: ${e.message}');
+      print('❌ [AUTH_DS] Error al iniciar sesión:');
+      print('   ${e.message}');
+      rethrow;
     } catch (e) {
-      throw Exception('Error al iniciar sesión: $e');
+      print('❌ [AUTH_DS] Error general al iniciar sesión: $e');
+      rethrow;
     }
   }
 
   /// Cerrar sesión
   Future<void> signOut() async {
     try {
+      print('🔵 [AUTH_DS] Cerrando sesión...');
       await _supabase.auth.signOut();
+      print('✅ [AUTH_DS] Sesión cerrada');
     } catch (e) {
+      print('❌ [AUTH_DS] Error al cerrar sesión: $e');
       throw Exception('Error al cerrar sesión: $e');
     }
   }
 
   /// Obtener usuario actual
   User? getCurrentUser() {
-    return _supabase.auth.currentUser;
+    final user = _supabase.auth.currentUser;
+    print('🔵 [AUTH_DS] Usuario actual: ${user?.id ?? "null"}');
+    return user;
   }
 
   /// Verificar si hay un usuario autenticado
   bool isAuthenticated() {
-    return _supabase.auth.currentUser != null;
+    final isAuth = _supabase.auth.currentUser != null;
+    print('🔵 [AUTH_DS] ¿Autenticado?: $isAuth');
+    return isAuth;
   }
 
   /// Stream de cambios de autenticación
@@ -92,17 +130,19 @@ class AuthRemoteDataSource {
   /// Recuperar contraseña
   Future<void> resetPassword(String email) async {
     try {
+      print('🔵 [AUTH_DS] Recuperando contraseña para: $email');
       await _supabase.auth.resetPasswordForEmail(email);
+      print('✅ [AUTH_DS] Email de recuperación enviado');
     } on AuthException catch (e) {
-      throw Exception('Error al recuperar contraseña: ${e.message}');
-    } catch (e) {
-      throw Exception('Error al recuperar contraseña: $e');
+      print('❌ [AUTH_DS] Error al recuperar contraseña: ${e.message}');
+      rethrow;
     }
   }
 
   /// Actualizar contraseña
   Future<UserResponse> updatePassword(String newPassword) async {
     try {
+      print('🔵 [AUTH_DS] Actualizando contraseña...');
       final response = await _supabase.auth.updateUser(
         UserAttributes(password: newPassword),
       );
@@ -111,17 +151,18 @@ class AuthRemoteDataSource {
         throw Exception('Error al actualizar contraseña');
       }
 
+      print('✅ [AUTH_DS] Contraseña actualizada');
       return response;
     } on AuthException catch (e) {
-      throw Exception('Error al actualizar contraseña: ${e.message}');
-    } catch (e) {
-      throw Exception('Error al actualizar contraseña: $e');
+      print('❌ [AUTH_DS] Error al actualizar contraseña: ${e.message}');
+      rethrow;
     }
   }
 
   /// Actualizar email
   Future<UserResponse> updateEmail(String newEmail) async {
     try {
+      print('🔵 [AUTH_DS] Actualizando email a: $newEmail');
       final response = await _supabase.auth.updateUser(
         UserAttributes(email: newEmail),
       );
@@ -130,11 +171,11 @@ class AuthRemoteDataSource {
         throw Exception('Error al actualizar email');
       }
 
+      print('✅ [AUTH_DS] Email actualizado');
       return response;
     } on AuthException catch (e) {
-      throw Exception('Error al actualizar email: ${e.message}');
-    } catch (e) {
-      throw Exception('Error al actualizar email: $e');
+      print('❌ [AUTH_DS] Error al actualizar email: ${e.message}');
+      rethrow;
     }
   }
 }
