@@ -39,17 +39,23 @@ class ProfilesRepositoryImpl implements ProfilesRepository {
     double? baseRate,
   }) async {
     try {
+      // Construir el mapa de actualizaciones
+      final updates = <String, dynamic>{};
+      
+      if (fullName != null) updates['full_name'] = fullName;
+      if (phone != null) updates['phone'] = phone;
+      if (bio != null) updates['bio'] = bio;
+      if (specialties != null) updates['specialties'] = specialties;
+      if (coverageZones != null) updates['coverage_zones'] = coverageZones;
+      if (baseRate != null) updates['base_rate'] = baseRate;
+
+      // Llamar al método correcto del datasource
+      // updateProfileFields(String userId, Map<String, dynamic> fields)
       final profileModel = await _remoteDataSource.updateProfileFields(
-        userId: userId,
-        updates: {
-          if (fullName != null) 'full_name': fullName,
-          if (phone != null) 'phone': phone,
-          if (bio != null) 'bio': bio,
-          if (specialties != null) 'specialties': specialties,
-          if (coverageZones != null) 'coverage_zones': coverageZones,
-          if (baseRate != null) 'base_rate': baseRate,
-        },
+        userId,
+        updates,
       );
+      
       return profileModel.toEntity();
     } catch (e) {
       throw Exception('Error al actualizar perfil: $e');
@@ -64,11 +70,13 @@ class ProfilesRepositoryImpl implements ProfilesRepository {
     required String address,
   }) async {
     try {
+      // Llamar al método con named parameters
+      // updateLocation(String userId, {required double latitude, required double longitude, String? address})
       final profileModel = await _remoteDataSource.updateLocation(
         userId,
-        latitude,
-        longitude,
-        address,
+        latitude: latitude,
+        longitude: longitude,
+        address: address,
       );
       return profileModel.toEntity();
     } catch (e) {
@@ -84,6 +92,8 @@ class ProfilesRepositoryImpl implements ProfilesRepository {
     int radiusMeters = 10000,
   }) async {
     try {
+      // CORRECCIÓN FINAL: Todos son named parameters
+      // getNearbyTechnicians({required double latitude, required double longitude, required String serviceType, int radiusMeters})
       final profileModels = await _remoteDataSource.getNearbyTechnicians(
         latitude: latitude,
         longitude: longitude,

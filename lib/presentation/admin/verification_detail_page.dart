@@ -4,7 +4,6 @@ import '../../data/datasources/profiles_remote_ds.dart';
 import '../../data/datasources/storage_remote_ds.dart';
 import '../../data/models/profile_model.dart';
 import '../../core/utils/snackbar_helper.dart';
-import '../../core/constants/verification_states.dart';
 
 /// Pantalla de detalle de verificación (Admin)
 class VerificationDetailPage extends StatefulWidget {
@@ -29,6 +28,13 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
   bool _isLoading = true;
   bool _isProcessing = false;
 
+  // Lista de tipos de documentos
+  static const List<String> _documentTypes = [
+    'id_front',
+    'id_back',
+    'certificate',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -50,11 +56,11 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
 
       // Cargar URLs de documentos
       final documentUrls = <String, String?>{};
-      for (final docType in VerificationStates.documentTypes) {
+      for (final docType in _documentTypes) {
         try {
           final url = await _storageDS.getVerificationDocumentUrl(
-            widget.technicianId,
-            docType,
+            technicianId: widget.technicianId,
+            documentType: docType,
           );
           documentUrls[docType] = url;
         } catch (e) {
@@ -82,8 +88,8 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
     try {
       await _profilesDS.updateVerificationStatus(
         widget.technicianId,
-        'approved',
-        _notesController.text.trim().isEmpty
+        status: 'approved',
+        notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
       );
@@ -91,7 +97,7 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
       if (mounted) {
         SnackbarHelper.showSuccess(
           context,
-          'Técnico verificado exitosamente',
+          '¡Técnico verificado exitosamente!',
         );
         Navigator.pop(context, true);
       }
@@ -120,8 +126,8 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
     try {
       await _profilesDS.updateVerificationStatus(
         widget.technicianId,
-        'rejected',
-        _notesController.text.trim(),
+        status: 'rejected',
+        notes: _notesController.text.trim(),
       );
 
       if (mounted) {
@@ -163,6 +169,19 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
         ),
       ),
     );
+  }
+
+  String _getDocumentTitle(String type) {
+    switch (type) {
+      case 'id_front':
+        return 'Cédula (Frontal)';
+      case 'id_back':
+        return 'Cédula (Reverso)';
+      case 'certificate':
+        return 'Certificado Profesional';
+      default:
+        return 'Documento';
+    }
   }
 
   @override
@@ -245,28 +264,18 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // ID Front
-                _buildDocumentCard(
-                  'Cédula (Frontal)',
-                  'id_front',
-                  _documentUrls['id_front'],
-                ),
-                const SizedBox(height: 12),
+                // Iterar sobre los tipos de documentos
+                ..._documentTypes.map((docType) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildDocumentCard(
+                      _getDocumentTitle(docType),
+                      docType,
+                      _documentUrls[docType],
+                    ),
+                  );
+                }),
 
-                // ID Back
-                _buildDocumentCard(
-                  'Cédula (Reverso)',
-                  'id_back',
-                  _documentUrls['id_back'],
-                ),
-                const SizedBox(height: 12),
-
-                // Certificate
-                _buildDocumentCard(
-                  'Certificado Profesional',
-                  'certificate',
-                  _documentUrls['certificate'],
-                ),
                 const SizedBox(height: 24),
 
                 // Notas
