@@ -22,23 +22,32 @@ class ServiceRequestsRemoteDataSource {
         throw Exception('No hay usuario autenticado');
       }
 
+      print('📍 [SERVICE_REQUESTS_DS] Creando solicitud con ubicación:');
+      print('   Lat: $latitude, Lon: $longitude');
+      print('   Address: $address');
+
       final response = await _supabase
           .from('service_requests')
           .insert({
             'client_id': userId,
             'title': title,
             'description': description,
-            'service_type': serviceType,
+            'service_type': serviceType, // ← IMPORTANTE: nombre correcto
+            'latitude': latitude,        // ← AGREGAR
+            'longitude': longitude,      // ← AGREGAR
             'location': 'POINT($longitude $latitude)',
             'address': address,
             'status': 'pending',
-            'images': images,
+            'images': images,        
           })
           .select()
           .single();
 
+      print('✅ [SERVICE_REQUESTS_DS] Solicitud creada con ubicación guardada');
+
       return ServiceRequestModel.fromJson(response);
     } catch (e) {
+      print('❌ [SERVICE_REQUESTS_DS] Error al crear solicitud: $e');
       throw Exception('Error al crear solicitud: $e');
     }
   }

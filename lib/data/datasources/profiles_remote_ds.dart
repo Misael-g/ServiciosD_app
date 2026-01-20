@@ -148,14 +148,19 @@ class ProfilesRemoteDataSource {
   }) async {
     print('🔵 [PROFILES_DS] Actualizando ubicación: $userId');
     print('   Lat: $latitude, Lon: $longitude');
+    print('   Address: ${address ?? "no proporcionada"}');
     
     final fields = <String, dynamic>{
+      'latitude': latitude,                      // ✅ AGREGAR
+      'longitude': longitude,                    // ✅ AGREGAR
       'location': 'POINT($longitude $latitude)',
     };
 
-    if (address != null) {
+    if (address != null && address.isNotEmpty) {
       fields['address'] = address;
     }
+
+    print('📝 [PROFILES_DS] Campos a actualizar: $fields');
 
     return updateProfileFields(userId, fields);
   }
