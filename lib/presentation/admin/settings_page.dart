@@ -87,6 +87,39 @@ class AdminSettingsPage extends StatelessWidget {
           const Divider(),
 
           ListTile(
+            leading: const Icon(Icons.build_circle),
+            title: const Text('Tipos de Servicios'),
+            subtitle: const Text('Gestionar categorías de servicios'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              SnackbarHelper.showInfo(context, 'Por implementar');
+            },
+          ),
+          const Divider(),
+
+          ListTile(
+            leading: const Icon(Icons.attach_money),
+            title: const Text('Tarifas y Comisiones'),
+            subtitle: const Text('Configurar comisiones de la plataforma'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              SnackbarHelper.showInfo(context, 'Por implementar');
+            },
+          ),
+          const Divider(),
+
+          ListTile(
+            leading: const Icon(Icons.location_searching),
+            title: const Text('Radio de Búsqueda'),
+            subtitle: const Text('Distancia máxima para técnicos (km)'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              SnackbarHelper.showInfo(context, 'Por implementar');
+            },
+          ),
+          const Divider(),
+
+          ListTile(
             leading: const Icon(Icons.bar_chart),
             title: const Text('Reportes'),
             subtitle: const Text('Ver estadísticas y reportes'),

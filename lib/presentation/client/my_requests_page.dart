@@ -3,6 +3,7 @@ import '../../data/datasources/service_requests_remote_ds.dart';
 import '../../data/models/service_request_model.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/constants/service_states.dart';
+import 'request_detail_page.dart';
 
 /// Pantalla con historial de solicitudes del cliente
 class MyRequestsPage extends StatefulWidget {
@@ -135,7 +136,12 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: () {
-          // TODO: Navegar a detalle
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RequestDetailPage(requestId: request.id),
+            ),
+          ).then((_) => _loadRequests());
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(

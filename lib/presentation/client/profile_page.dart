@@ -4,6 +4,7 @@ import '../../domain/repositories/auth_repository.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
 import '../../data/models/profile_model.dart';
 import '../../core/utils/snackbar_helper.dart';
+import 'edit_profile_page.dart';
 
 /// Pantalla de perfil del cliente
 class ClientProfilePage extends StatefulWidget {
@@ -136,8 +137,19 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                     leading: const Icon(Icons.edit),
                     title: const Text('Editar Perfil'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      // TODO: Editar perfil
+                    onTap: () async {
+                      if (_profile != null) {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditProfilePage(profile: _profile!),
+                          ),
+                        );
+                        
+                        if (result == true) {
+                          _loadProfile(); // Recargar perfil
+                        }
+                      }
                     },
                   ),
                   const Divider(),

@@ -4,6 +4,7 @@ import '../../domain/repositories/auth_repository.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
 import '../../data/models/profile_model.dart';
 import '../../core/utils/snackbar_helper.dart';
+import 'edit_profile_page.dart'; // ← IMPORTAR
 
 /// Pantalla de perfil del técnico
 class TechnicianProfilePage extends StatefulWidget {
@@ -112,7 +113,63 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 8),
+
+                  // Ubicación actual
+                  if (_profile?.address != null) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            _profile!.address!,
+                            style: TextStyle(color: Colors.grey[600]),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Especialidades
+                  if (_profile?.specialties != null &&
+                      _profile!.specialties!.isNotEmpty) ...[
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Especialidades',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _profile!.specialties!
+                                  .map((s) => Chip(
+                                        label: Text(s),
+                                        backgroundColor:
+                                            Theme.of(context).colorScheme.primaryContainer,
+                                      ))
+                                  .toList(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
 
                   // Métricas
                   Row(
@@ -141,8 +198,20 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage> {
                     leading: const Icon(Icons.edit),
                     title: const Text('Editar Perfil'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      // TODO: Editar perfil
+                    onTap: () async {
+                      if (_profile != null) {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                TechnicianEditProfilePage(profile: _profile!),
+                          ),
+                        );
+
+                        if (result == true) {
+                          _loadProfile(); // Recargar perfil
+                        }
+                      }
                     },
                   ),
                   const Divider(),
@@ -152,6 +221,29 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage> {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       // TODO: Portafolio
+                      SnackbarHelper.showInfo(context, 'Por implementar');
+                    },
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.location_on),
+                    title: const Text('Actualizar Ubicación'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      if (_profile != null) {
+                        // Navegar a edición pero solo para actualizar ubicación
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                TechnicianEditProfilePage(profile: _profile!),
+                          ),
+                        );
+
+                        if (result == true) {
+                          _loadProfile();
+                        }
+                      }
                     },
                   ),
                   const Divider(),
@@ -161,6 +253,7 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage> {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       // TODO: Configuración
+                      SnackbarHelper.showInfo(context, 'Por implementar');
                     },
                   ),
                   const Divider(),
