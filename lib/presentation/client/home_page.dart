@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../data/datasources/service_requests_remote_ds.dart';
+import '../../data/datasources/profiles_remote_ds.dart';
 import '../../data/models/service_request_model.dart';
+import '../../data/models/profile_model.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/constants/service_states.dart';
 import 'create_request_page.dart';
 import 'request_detail_page.dart';
 
-/// Página principal del cliente
+/// Página principal del cliente con saludo personalizado
 class ClientHomePage extends StatefulWidget {
   const ClientHomePage({super.key});
 
@@ -17,39 +19,68 @@ class ClientHomePage extends StatefulWidget {
 class _ClientHomePageState extends State<ClientHomePage> {
   final ServiceRequestsRemoteDataSource _serviceRequestsDataSource =
       ServiceRequestsRemoteDataSource();
+  final ProfilesRemoteDataSource _profilesDataSource =
+      ProfilesRemoteDataSource();
 
   List<ServiceRequestModel> _activeRequests = [];
+  ProfileModel? _profile;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadActiveRequests();
+    _loadData();
   }
 
-  Future<void> _loadActiveRequests() async {
+  Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
     try {
-      final requests = await _serviceRequestsDataSource.getMyServiceRequests();
-      
-      // Filtrar solo solicitudes activas (no completadas ni canceladas)
-      final activeRequests = requests.where((r) => 
-        r.status != 'completed' && 
-        r.status != 'rated' && 
-        r.status != 'cancelled'
-      ).toList();
+      // Cargar perfil y solicitudes en paralelo
+      final results = await Future.wait([
+        _profilesDataSource.getCurrentUserProfile(),
+        _serviceRequestsDataSource.getMyServiceRequests(),
+      ]);
+
+      final profile = results[0] as ProfileModel;
+      final requests = results[1] as List<ServiceRequestModel>;
+
+      // Filtrar solo solicitudes activas
+      final activeRequests = requests
+          .where((r) =>
+              r.status != 'completed' &&
+              r.status != 'rated' &&
+              r.status != 'cancelled')
+          .toList();
 
       setState(() {
+        _profile = profile;
         _activeRequests = activeRequests;
         _isLoading = false;
       });
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        SnackbarHelper.showError(context, 'Error al cargar solicitudes');
+        SnackbarHelper.showError(context, 'Error al cargar datos');
       }
     }
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return '¡Buenos días';
+    } else if (hour < 19) {
+      return '¡Buenas tardes';
+    } else {
+      return '¡Buenas noches';
+    }
+  }
+
+  String _getFirstName() {
+    if (_profile == null) return '';
+    final names = _profile!.fullName.trim().split(' ');
+    return names.isNotEmpty ? names[0] : '';
   }
 
   @override
@@ -61,14 +92,14 @@ class _ClientHomePageState extends State<ClientHomePage> {
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
-              // TODO: Implementar notificaciones
-              SnackbarHelper.showInfo(context, 'Notificaciones - Por implementar');
+              SnackbarHelper.showInfo(
+                  context, 'Notificaciones - Por implementar');
             },
           ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadActiveRequests,
+        onRefresh: _loadData,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
@@ -77,7 +108,7 @@ class _ClientHomePageState extends State<ClientHomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Tarjeta de bienvenida
+                    // Tarjeta de bienvenida PERSONALIZADA
                     _buildWelcomeCard(),
                     const SizedBox(height: 24),
 
@@ -101,7 +132,7 @@ class _ClientHomePageState extends State<ClientHomePage> {
           );
 
           if (result == true) {
-            _loadActiveRequests();
+            _loadData();
           }
         },
         icon: const Icon(Icons.add),
@@ -128,7 +159,7 @@ class _ClientHomePageState extends State<ClientHomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '¡Hola!',
+                    '${_getGreeting()}, ${_getFirstName()}!',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -149,7 +180,11 @@ class _ClientHomePageState extends State<ClientHomePage> {
 
   Widget _buildServicesSection() {
     final services = [
-      {'name': 'Electricista', 'icon': Icons.electrical_services, 'color': Colors.amber},
+      {
+        'name': 'Electricista',
+        'icon': Icons.electrical_services,
+        'color': Colors.amber
+      },
       {'name': 'Plomero', 'icon': Icons.plumbing, 'color': Colors.blue},
       {'name': 'Carpintero', 'icon': Icons.carpenter, 'color': Colors.brown},
       {'name': 'Pintor', 'icon': Icons.format_paint, 'color': Colors.purple},
@@ -190,7 +225,7 @@ class _ClientHomePageState extends State<ClientHomePage> {
                   ),
                 ).then((result) {
                   if (result == true) {
-                    _loadActiveRequests();
+                    _loadData();
                   }
                 });
               },
@@ -247,7 +282,7 @@ class _ClientHomePageState extends State<ClientHomePage> {
           ],
         ),
         const SizedBox(height: 16),
-        
+
         if (_activeRequests.isEmpty)
           Center(
             child: Padding(
@@ -283,7 +318,8 @@ class _ClientHomePageState extends State<ClientHomePage> {
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _activeRequests.length > 3 ? 3 : _activeRequests.length,
+            itemCount:
+                _activeRequests.length > 3 ? 3 : _activeRequests.length,
             itemBuilder: (context, index) {
               final request = _activeRequests[index];
               return _buildRequestCard(request);
@@ -303,7 +339,7 @@ class _ClientHomePageState extends State<ClientHomePage> {
             MaterialPageRoute(
               builder: (_) => RequestDetailPage(requestId: request.id),
             ),
-          ).then((_) => _loadActiveRequests());
+          ).then((_) => _loadData());
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -328,14 +364,16 @@ class _ClientHomePageState extends State<ClientHomePage> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Color(ServiceStates.getStateColor(request.status))
-                          .withOpacity(0.1),
+                      color:
+                          Color(ServiceStates.getStateColor(request.status))
+                              .withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       ServiceStates.getDisplayName(request.status),
                       style: TextStyle(
-                        color: Color(ServiceStates.getStateColor(request.status)),
+                        color: Color(ServiceStates.getStateColor(
+                            request.status)),
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -363,16 +401,19 @@ class _ClientHomePageState extends State<ClientHomePage> {
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.location_on_outlined, size: 16, color: Colors.grey[600]),
+                  Icon(Icons.location_on_outlined,
+                      size: 16, color: Colors.grey[600]),
                   const SizedBox(width: 4),
-                  Text(
-                    request.address,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
+                  Flexible(
+                    child: Text(
+                      request.address,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

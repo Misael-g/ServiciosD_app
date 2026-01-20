@@ -1,17 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
 import '../../data/datasources/storage_remote_ds.dart';
 import '../../data/models/profile_model.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/snackbar_helper.dart';
-import '../../core/utils/location_helper.dart';
 import '../../core/config/supabase_config.dart';
 
-/// Pantalla de edición de perfil para Técnico
+/// Pantalla de edición de perfil para Técnico (SIN ubicación)
 class TechnicianEditProfilePage extends StatefulWidget {
   final ProfileModel profile;
 
@@ -25,11 +22,11 @@ class TechnicianEditProfilePage extends StatefulWidget {
       _TechnicianEditProfilePageState();
 }
 
-class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
+class _TechnicianEditProfilePageState
+    extends State<TechnicianEditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _addressController = TextEditingController();
   final _bioController = TextEditingController();
   final _baseRateController = TextEditingController();
 
@@ -39,11 +36,9 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
 
   File? _selectedImage;
   String? _profilePictureUrl;
-  Position? _currentPosition;
   bool _isLoading = false;
-  bool _isGettingLocation = false;
 
-  // Especialidades disponibles
+  // Especialidades y zonas
   final List<String> _availableSpecialties = [
     'Electricista',
     'Plomero',
@@ -59,9 +54,6 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
     'Otros',
   ];
 
-  List<String> _selectedSpecialties = [];
-
-  // Zonas de cobertura disponibles
   final List<String> _availableZones = [
     'Norte',
     'Sur',
@@ -71,6 +63,7 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
     'Todo el área metropolitana',
   ];
 
+  List<String> _selectedSpecialties = [];
   List<String> _selectedZones = [];
 
   @override
@@ -82,39 +75,18 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
   void _loadProfileData() {
     _fullNameController.text = widget.profile.fullName;
     _phoneController.text = widget.profile.phone ?? '';
-    _addressController.text = widget.profile.address ?? '';
     _bioController.text = widget.profile.bio ?? '';
     _baseRateController.text =
         widget.profile.baseRate?.toStringAsFixed(0) ?? '';
     _profilePictureUrl = widget.profile.profilePictureUrl;
-
-    // Cargar especialidades seleccionadas
     _selectedSpecialties = widget.profile.specialties ?? [];
-
-    // Cargar zonas de cobertura
     _selectedZones = widget.profile.coverageZones ?? [];
-
-    if (widget.profile.latitude != null && widget.profile.longitude != null) {
-      _currentPosition = Position(
-        latitude: widget.profile.latitude!,
-        longitude: widget.profile.longitude!,
-        timestamp: DateTime.now(),
-        accuracy: 0,
-        altitude: 0,
-        heading: 0,
-        speed: 0,
-        speedAccuracy: 0,
-        altitudeAccuracy: 0,
-        headingAccuracy: 0,
-      );
-    }
   }
 
   @override
   void dispose() {
     _fullNameController.dispose();
     _phoneController.dispose();
-    _addressController.dispose();
     _bioController.dispose();
     _baseRateController.dispose();
     super.dispose();
@@ -158,49 +130,6 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
     }
   }
 
-  Future<void> _getCurrentLocation() async {
-    setState(() => _isGettingLocation = true);
-
-    try {
-      final position = await LocationHelper.getCurrentLocation();
-
-      if (position != null) {
-        setState(() => _currentPosition = position);
-
-        try {
-          final placemarks = await placemarkFromCoordinates(
-            position.latitude,
-            position.longitude,
-          );
-
-          if (placemarks.isNotEmpty) {
-            final place = placemarks.first;
-            final address =
-                '${place.street}, ${place.locality}, ${place.country}';
-            _addressController.text = address;
-          }
-        } catch (e) {
-          // Silenciosamente fallar
-        }
-      } else {
-        if (mounted) {
-          SnackbarHelper.showError(
-            context,
-            'No se pudo obtener la ubicación',
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'Error al obtener ubicación');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isGettingLocation = false);
-      }
-    }
-  }
-
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -238,25 +167,16 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
         );
       }
 
-      // Preparar datos de actualización
+      // Preparar datos (SIN ubicación)
       final updates = <String, dynamic>{
         'full_name': _fullNameController.text.trim(),
         'phone': _phoneController.text.trim(),
-        'address': _addressController.text.trim(),
         'bio': _bioController.text.trim(),
         'base_rate': double.parse(_baseRateController.text),
         'specialties': _selectedSpecialties,
         'coverage_zones': _selectedZones,
         'profile_picture_url': imageUrl,
       };
-
-      // Actualizar ubicación si existe
-      if (_currentPosition != null) {
-        updates['location'] = LocationHelper.coordinatesToPostGIS(
-          _currentPosition!.latitude,
-          _currentPosition!.longitude,
-        );
-      }
 
       await _profilesDS.updateProfileFields(userId, updates);
 
@@ -373,7 +293,7 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
                                 _selectedSpecialties.remove(specialty);
                               }
                             });
-                            setState(() {}); // Actualizar widget principal
+                            setState(() {});
                           },
                         );
                       },
@@ -429,7 +349,7 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
                         _selectedZones.remove(zone);
                       }
                     });
-                    setState(() {}); // Actualizar widget principal
+                    setState(() {});
                   },
                 );
               })),
@@ -459,7 +379,7 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Foto de perfil
+            // Foto
             Center(
               child: Stack(
                 children: [
@@ -471,7 +391,8 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
                         : (_profilePictureUrl != null
                             ? NetworkImage(_profilePictureUrl!)
                             : null) as ImageProvider?,
-                    child: _selectedImage == null && _profilePictureUrl == null
+                    child: _selectedImage == null &&
+                            _profilePictureUrl == null
                         ? Text(
                             widget.profile.fullName[0].toUpperCase(),
                             style: const TextStyle(
@@ -487,8 +408,8 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
                     child: CircleAvatar(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       child: IconButton(
-                        icon:
-                            const Icon(Icons.edit, color: Colors.white, size: 20),
+                        icon: const Icon(Icons.edit,
+                            color: Colors.white, size: 20),
                         onPressed: _showImageOptions,
                       ),
                     ),
@@ -498,16 +419,7 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
             ),
             const SizedBox(height: 32),
 
-            // Información básica
-            Text(
-              'Información Básica',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 16),
-
-            // Nombre completo
+            // Nombre
             TextFormField(
               controller: _fullNameController,
               decoration: const InputDecoration(
@@ -516,7 +428,6 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
               ),
               validator: Validators.validateFullName,
               enabled: !_isLoading,
-              textCapitalization: TextCapitalization.words,
             ),
             const SizedBox(height: 16),
 
@@ -544,15 +455,6 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
             ),
             const SizedBox(height: 32),
 
-            // Información profesional
-            Text(
-              'Información Profesional',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 16),
-
             // Especialidades
             InkWell(
               onTap: _isLoading ? null : _showSpecialtiesSelector,
@@ -572,7 +474,8 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
                         runSpacing: 4,
                         children: _selectedSpecialties
                             .map((s) => Chip(
-                                  label: Text(s, style: const TextStyle(fontSize: 12)),
+                                  label: Text(s,
+                                      style: const TextStyle(fontSize: 12)),
                                   visualDensity: VisualDensity.compact,
                                 ))
                             .toList(),
@@ -589,7 +492,6 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
                 labelText: 'Tarifa Base por Hora',
                 prefixText: '\$ ',
                 prefixIcon: Icon(Icons.attach_money),
-                hintText: '25.00',
               ),
               validator: Validators.validatePrice,
               enabled: !_isLoading,
@@ -602,7 +504,7 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
               maxLines: 4,
               decoration: const InputDecoration(
                 labelText: 'Descripción / Biografía',
-                hintText: 'Cuéntanos sobre tu experiencia y servicios...',
+                hintText: 'Cuéntanos sobre tu experiencia...',
                 prefixIcon: Icon(Icons.info_outline),
                 alignLabelWithHint: true,
               ),
@@ -617,46 +519,9 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
               },
               enabled: !_isLoading,
             ),
-            const SizedBox(height: 32),
-
-            // Ubicación
-            Text(
-              'Ubicación y Cobertura',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
             const SizedBox(height: 16),
 
-            // Dirección
-            TextFormField(
-              controller: _addressController,
-              decoration: InputDecoration(
-                labelText: 'Dirección Base',
-                prefixIcon: const Icon(Icons.location_on_outlined),
-                suffixIcon: _isGettingLocation
-                    ? const Padding(
-                        padding: EdgeInsets.all(12.0),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : IconButton(
-                        icon: const Icon(Icons.my_location),
-                        onPressed: _isLoading ? null : _getCurrentLocation,
-                        tooltip: 'Obtener ubicación actual',
-                      ),
-              ),
-              validator: (value) =>
-                  Validators.validateRequired(value, 'Dirección'),
-              enabled: !_isLoading,
-              maxLines: 2,
-            ),
-            const SizedBox(height: 16),
-
-            // Zonas de cobertura
+            // Zonas
             InkWell(
               onTap: _isLoading ? null : _showZonesSelector,
               child: InputDecorator(
@@ -667,7 +532,7 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
                 ),
                 child: _selectedZones.isEmpty
                     ? const Text(
-                        'Selecciona las zonas donde ofreces servicio',
+                        'Selecciona zonas donde ofreces servicio',
                         style: TextStyle(color: Colors.grey),
                       )
                     : Wrap(
@@ -675,36 +540,39 @@ class _TechnicianEditProfilePageState extends State<TechnicianEditProfilePage> {
                         runSpacing: 4,
                         children: _selectedZones
                             .map((z) => Chip(
-                                  label: Text(z, style: const TextStyle(fontSize: 12)),
+                                  label: Text(z,
+                                      style: const TextStyle(fontSize: 12)),
                                   visualDensity: VisualDensity.compact,
                                 ))
                             .toList(),
                       ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
 
-            // Información de ubicación
-            if (_currentPosition != null)
-              Card(
-                color: Colors.green[50],
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.green[700]),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Ubicación GPS guardada',
-                          style: TextStyle(color: Colors.green[900]),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            // Nota informativa
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(12),
               ),
-
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue[700]),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Tu ubicación GPS se actualiza automáticamente cuando accedes a la pestaña de solicitudes',
+                      style: TextStyle(
+                        color: Colors.blue[900],
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 32),
 
             // Botón guardar

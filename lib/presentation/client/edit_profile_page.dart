@@ -1,17 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
 import '../../data/datasources/storage_remote_ds.dart';
 import '../../data/models/profile_model.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/snackbar_helper.dart';
-import '../../core/utils/location_helper.dart';
 import '../../core/config/supabase_config.dart';
 
-/// Pantalla de edición de perfil para Cliente
+/// Pantalla de edición de perfil para Cliente (SIN ubicación)
 class EditProfilePage extends StatefulWidget {
   final ProfileModel profile;
 
@@ -28,7 +25,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _addressController = TextEditingController();
 
   final ProfilesRemoteDataSource _profilesDS = ProfilesRemoteDataSource();
   final StorageRemoteDataSource _storageDS = StorageRemoteDataSource();
@@ -36,9 +32,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   File? _selectedImage;
   String? _profilePictureUrl;
-  Position? _currentPosition;
   bool _isLoading = false;
-  bool _isGettingLocation = false;
 
   @override
   void initState() {
@@ -49,30 +43,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
   void _loadProfileData() {
     _fullNameController.text = widget.profile.fullName;
     _phoneController.text = widget.profile.phone ?? '';
-    _addressController.text = widget.profile.address ?? '';
     _profilePictureUrl = widget.profile.profilePictureUrl;
-
-    if (widget.profile.latitude != null && widget.profile.longitude != null) {
-      _currentPosition = Position(
-        latitude: widget.profile.latitude!,
-        longitude: widget.profile.longitude!,
-        timestamp: DateTime.now(),
-        accuracy: 0,
-        altitude: 0,
-        heading: 0,
-        speed: 0,
-        speedAccuracy: 0,
-        altitudeAccuracy: 0,
-        headingAccuracy: 0,
-      );
-    }
   }
 
   @override
   void dispose() {
     _fullNameController.dispose();
     _phoneController.dispose();
-    _addressController.dispose();
     super.dispose();
   }
 
@@ -114,50 +91,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  Future<void> _getCurrentLocation() async {
-    setState(() => _isGettingLocation = true);
-
-    try {
-      final position = await LocationHelper.getCurrentLocation();
-
-      if (position != null) {
-        setState(() => _currentPosition = position);
-
-        // Obtener dirección
-        try {
-          final placemarks = await placemarkFromCoordinates(
-            position.latitude,
-            position.longitude,
-          );
-
-          if (placemarks.isNotEmpty) {
-            final place = placemarks.first;
-            final address =
-                '${place.street}, ${place.locality}, ${place.country}';
-            _addressController.text = address;
-          }
-        } catch (e) {
-          // Silenciosamente fallar
-        }
-      } else {
-        if (mounted) {
-          SnackbarHelper.showError(
-            context,
-            'No se pudo obtener la ubicación',
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'Error al obtener ubicación');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isGettingLocation = false);
-      }
-    }
-  }
-
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -179,27 +112,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
         );
       }
 
-      // Preparar datos de actualización
+      // Preparar datos de actualización (SIN ubicación)
       final updates = <String, dynamic>{
         'full_name': _fullNameController.text.trim(),
         'phone': _phoneController.text.trim(),
-        'address': _addressController.text.trim(),
         'profile_picture_url': imageUrl,
       };
-
-      // Actualizar ubicación si existe
-      if (_currentPosition != null) {
-        updates['location'] = LocationHelper.coordinatesToPostGIS(
-          _currentPosition!.latitude,
-          _currentPosition!.longitude,
-        );
-      }
 
       await _profilesDS.updateProfileFields(userId, updates);
 
       if (mounted) {
         SnackbarHelper.showSuccess(context, '¡Perfil actualizado!');
-        Navigator.pop(context, true); // Retornar true para recargar
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -347,57 +271,31 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 enabled: false,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
 
-            // Dirección
-            TextFormField(
-              controller: _addressController,
-              decoration: InputDecoration(
-                labelText: 'Dirección',
-                prefixIcon: const Icon(Icons.location_on_outlined),
-                suffixIcon: _isGettingLocation
-                    ? const Padding(
-                        padding: EdgeInsets.all(12.0),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : IconButton(
-                        icon: const Icon(Icons.my_location),
-                        onPressed: _isLoading ? null : _getCurrentLocation,
-                        tooltip: 'Obtener ubicación actual',
-                      ),
+            // Nota informativa
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(12),
               ),
-              validator: (value) =>
-                  Validators.validateRequired(value, 'Dirección'),
-              enabled: !_isLoading,
-              maxLines: 2,
-            ),
-            const SizedBox(height: 16),
-
-            // Información de ubicación
-            if (_currentPosition != null)
-              Card(
-                color: Colors.green[50],
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.green[700]),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Ubicación GPS guardada',
-                          style: TextStyle(color: Colors.green[900]),
-                        ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue[700]),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'La ubicación se establece automáticamente al crear una solicitud de servicio',
+                      style: TextStyle(
+                        color: Colors.blue[900],
+                        fontSize: 13,
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-
+            ),
             const SizedBox(height: 32),
 
             // Botón guardar
