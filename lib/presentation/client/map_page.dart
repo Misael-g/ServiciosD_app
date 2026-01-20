@@ -292,41 +292,86 @@ class _ClientMapPageState extends State<ClientMapPage> {
                             userAgentPackageName: 'com.example.servicios_app',
                           ),
 
+                          // Círculo de radio de búsqueda (10km)
+                          CircleLayer(
+                            circles: [
+                              CircleMarker(
+                                point: LatLng(
+                                  _currentPosition!.latitude,
+                                  _currentPosition!.longitude,
+                                ),
+                                radius: 10000, // 10km en metros
+                                useRadiusInMeter: true,
+                                color: Colors.blue.withOpacity(0.1),
+                                borderColor: Colors.blue.withOpacity(0.5),
+                                borderStrokeWidth: 2,
+                              ),
+                            ],
+                          ),
+
                           // Marcadores
                           MarkerLayer(
                             markers: [
-                              // Marcador de ubicación actual
+                              // Marcador de ubicación actual (TÚ - CLIENTE)
                               Marker(
                                 point: LatLng(
                                   _currentPosition!.latitude,
                                   _currentPosition!.longitude,
                                 ),
-                                width: 80,
-                                height: 80,
-                                child: const Icon(
-                                  Icons.my_location,
-                                  color: Colors.blue,
-                                  size: 40,
+                                width: 100,
+                                height: 100,
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue,
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.3),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Text(
+                                        'Tu ubicación',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const Icon(
+                                      Icons.person_pin_circle,
+                                      color: Colors.blue,
+                                      size: 50,
+                                    ),
+                                  ],
                                 ),
                               ),
 
-                              // Marcadores de técnicos
-                              ..._nearbyTechnicians.map((technician) {
-                                if (technician.latitude == null ||
-                                    technician.longitude == null) {
-                                  return null;
-                                }
-
+                              // Marcadores de técnicos cercanos
+                              ..._nearbyTechnicians.where((t) => 
+                                t.latitude != null && t.longitude != null
+                              ).map((technician) {
                                 return Marker(
                                   point: LatLng(
                                     technician.latitude!,
                                     technician.longitude!,
                                   ),
-                                  width: 100,
-                                  height: 100,
+                                  width: 120,
+                                  height: 120,
                                   child: GestureDetector(
                                     onTap: () => _showTechnicianInfo(technician),
                                     child: Column(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Container(
                                           padding: const EdgeInsets.symmetric(
@@ -336,9 +381,13 @@ class _ClientMapPageState extends State<ClientMapPage> {
                                           decoration: BoxDecoration(
                                             color: Colors.white,
                                             borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: Colors.orange,
+                                              width: 2,
+                                            ),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.black.withOpacity(0.2),
+                                                color: Colors.black.withOpacity(0.3),
                                                 blurRadius: 4,
                                                 offset: const Offset(0, 2),
                                               ),
@@ -347,21 +396,25 @@ class _ClientMapPageState extends State<ClientMapPage> {
                                           child: Text(
                                             technician.fullName.split(' ').first,
                                             style: const TextStyle(
-                                              fontSize: 10,
+                                              fontSize: 11,
                                               fontWeight: FontWeight.bold,
+                                              color: Colors.orange,
                                             ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
+                                        const SizedBox(height: 2),
                                         const Icon(
-                                          Icons.location_on,
-                                          color: Colors.red,
-                                          size: 40,
+                                          Icons.person_pin,
+                                          color: Colors.orange,
+                                          size: 50,
                                         ),
                                       ],
                                     ),
                                   ),
                                 );
-                              }).whereType<Marker>(),
+                              }),
                             ],
                           ),
                         ],
