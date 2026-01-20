@@ -128,8 +128,6 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
 
                   // Información
                   _buildInfoCard('Teléfono', _profile?.phone ?? 'No registrado', Icons.phone),
-                  const SizedBox(height: 12),
-                  _buildInfoCard('Dirección', _profile?.address ?? 'No registrada', Icons.location_on),
                   const SizedBox(height: 32),
 
                   // Opciones

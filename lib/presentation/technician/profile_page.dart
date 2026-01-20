@@ -115,27 +115,6 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Ubicación actual
-                  if (_profile?.address != null) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            _profile!.address!,
-                            style: TextStyle(color: Colors.grey[600]),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
                   // Especialidades
                   if (_profile?.specialties != null &&
                       _profile!.specialties!.isNotEmpty) ...[
@@ -222,28 +201,6 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage> {
                     onTap: () {
                       // TODO: Portafolio
                       SnackbarHelper.showInfo(context, 'Por implementar');
-                    },
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.location_on),
-                    title: const Text('Actualizar Ubicación'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () async {
-                      if (_profile != null) {
-                        // Navegar a edición pero solo para actualizar ubicación
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                TechnicianEditProfilePage(profile: _profile!),
-                          ),
-                        );
-
-                        if (result == true) {
-                          _loadProfile();
-                        }
-                      }
                     },
                   ),
                   const Divider(),
