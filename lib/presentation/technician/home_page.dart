@@ -4,7 +4,7 @@ import '../../data/datasources/quotations_remote_ds.dart';
 import '../../data/models/profile_model.dart';
 import '../../core/utils/snackbar_helper.dart';
 
-/// Página principal del técnico (Dashboard)
+/// Página principal del técnico con saludo personalizado
 class TechnicianHomePage extends StatefulWidget {
   const TechnicianHomePage({super.key});
 
@@ -48,6 +48,23 @@ class _TechnicianHomePageState extends State<TechnicianHomePage> {
     }
   }
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return '¡Buenos días';
+    } else if (hour < 19) {
+      return '¡Buenas tardes';
+    } else {
+      return '¡Buenas noches';
+    }
+  }
+
+  String _getFirstName() {
+    if (_profile == null) return '';
+    final names = _profile!.fullName.trim().split(' ');
+    return names.isNotEmpty ? names[0] : '';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -57,7 +74,7 @@ class _TechnicianHomePageState extends State<TechnicianHomePage> {
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
-              // TODO: Notificaciones
+              SnackbarHelper.showInfo(context, 'Notificaciones - Por implementar');
             },
           ),
         ],
@@ -69,41 +86,8 @@ class _TechnicianHomePageState extends State<TechnicianHomePage> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // Card de bienvenida
-                  Card(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '¡Hola, ${_profile?.fullName ?? "Técnico"}!',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.star,
-                                color: Colors.amber[700],
-                                size: 20,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${_profile?.averageRating?.toStringAsFixed(1) ?? "0.0"} '
-                                '(${_profile?.totalReviews ?? 0} reseñas)',
-                                style: Theme.of(context).textTheme.bodyLarge,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  // Card de bienvenida PERSONALIZADA
+                  _buildWelcomeCard(),
                   const SizedBox(height: 24),
 
                   // Métricas
@@ -151,9 +135,9 @@ class _TechnicianHomePageState extends State<TechnicianHomePage> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildMetricCard(
-                          'Tarifa\nBase',
-                          '\$${_profile?.baseRate?.toStringAsFixed(0) ?? "0"}/h',
-                          Icons.attach_money,
+                          'Total\nReseñas',
+                          '${_profile?.totalReviews ?? 0}',
+                          Icons.star,
                           Colors.purple,
                         ),
                       ),
@@ -178,6 +162,9 @@ class _TechnicianHomePageState extends State<TechnicianHomePage> {
                           .map((specialty) => Chip(
                                 label: Text(specialty),
                                 avatar: const Icon(Icons.verified, size: 18),
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
                               ))
                           .toList(),
                     ),
@@ -185,6 +172,50 @@ class _TechnicianHomePageState extends State<TechnicianHomePage> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildWelcomeCard() {
+    return Card(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Icon(
+              Icons.waving_hand,
+              size: 40,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${_getGreeting()}, ${_getFirstName()}!',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.star, color: Colors.amber[700], size: 20),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_profile?.averageRating?.toStringAsFixed(1) ?? "0.0"} '
+                        '(${_profile?.totalReviews ?? 0} reseñas)',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

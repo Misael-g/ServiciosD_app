@@ -4,9 +4,10 @@ import '../../domain/repositories/auth_repository.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
 import '../../data/models/profile_model.dart';
 import '../../core/utils/snackbar_helper.dart';
-import 'edit_profile_page.dart'; // ← IMPORTAR
+import 'edit_profile_page.dart';
+import 'portfolio_page.dart';
 
-/// Pantalla de perfil del técnico
+/// Pantalla de perfil del técnico (SIN tarifa/h)
 class TechnicianProfilePage extends StatefulWidget {
   const TechnicianProfilePage({super.key});
 
@@ -115,6 +116,27 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage> {
                   ),
                   const SizedBox(height: 8),
 
+                  // Ubicación actual
+                  if (_profile?.address != null) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            _profile!.address!,
+                            style: TextStyle(color: Colors.grey[600]),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   // Especialidades
                   if (_profile?.specialties != null &&
                       _profile!.specialties!.isNotEmpty) ...[
@@ -150,25 +172,11 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage> {
                     const SizedBox(height: 8),
                   ],
 
-                  // Métricas
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          'Servicios',
-                          '${_profile?.completedServices ?? 0}',
-                          Icons.check_circle,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          'Tarifa/h',
-                          '\$${_profile?.baseRate?.toStringAsFixed(0) ?? "0"}',
-                          Icons.attach_money,
-                        ),
-                      ),
-                    ],
+                  // Métricas (SIN tarifa/h)
+                  _buildStatCard(
+                    'Servicios Completados',
+                    '${_profile?.completedServices ?? 0}',
+                    Icons.check_circle,
                   ),
                   const SizedBox(height: 32),
 
@@ -188,7 +196,7 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage> {
                         );
 
                         if (result == true) {
-                          _loadProfile(); // Recargar perfil
+                          _loadProfile();
                         }
                       }
                     },
@@ -198,9 +206,36 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage> {
                     leading: const Icon(Icons.photo_library),
                     title: const Text('Mi Portafolio'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      // TODO: Portafolio
-                      SnackbarHelper.showInfo(context, 'Por implementar');
+                    onTap: () async {
+                      if (_profile != null) {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PortfolioPage(technician: _profile!),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.location_on),
+                    title: const Text('Actualizar Ubicación'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      if (_profile != null) {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                TechnicianEditProfilePage(profile: _profile!),
+                          ),
+                        );
+
+                        if (result == true) {
+                          _loadProfile();
+                        }
+                      }
                     },
                   ),
                   const Divider(),
@@ -209,7 +244,6 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage> {
                     title: const Text('Configuración'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
-                      // TODO: Configuración
                       SnackbarHelper.showInfo(context, 'Por implementar');
                     },
                   ),
@@ -234,20 +268,28 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage> {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
+        child: Row(
           children: [
-            Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+            Icon(icon, size: 40, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            Text(
-              label,
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
           ],
         ),
