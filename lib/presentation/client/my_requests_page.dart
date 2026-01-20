@@ -4,6 +4,7 @@ import '../../data/models/service_request_model.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/constants/service_states.dart';
 import 'request_detail_page.dart';
+import 'view_quotations_page.dart';
 
 /// Pantalla con historial de solicitudes del cliente
 class MyRequestsPage extends StatefulWidget {
@@ -206,6 +207,26 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                   ),
                 ],
               ),
+              if (request.status == 'quotation_sent' || request.status == 'quoted') ...[const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ViewQuotationsPage(
+                          serviceRequestId: request.id,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.receipt_long),
+                  label: const Text('Ver Cotizaciones'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

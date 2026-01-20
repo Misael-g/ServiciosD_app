@@ -10,6 +10,7 @@ import '../../core/utils/snackbar_helper.dart';
 import '../../core/constants/service_states.dart';
 import '../../core/config/supabase_config.dart';
 import 'send_quotation_page.dart';
+import '../client/request_detail_page.dart';
 
 /// Pantalla de solicitudes disponibles con mapa para el técnico
 class AvailableRequestsPage extends StatefulWidget {
@@ -123,106 +124,6 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
     } catch (e) {
       print('Error al cargar solicitudes: $e');
     }
-  }
-
-  void _showRequestDetail(ServiceRequestModel request, double? distance) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.4,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) => Container(
-          padding: const EdgeInsets.all(20),
-          child: ListView(
-            controller: scrollController,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      request.title,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  if (distance != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.location_on,
-                              size: 16, color: Colors.blue[700]),
-                          const SizedBox(width: 4),
-                          Text(
-                            LocationHelper.formatDistance(distance),
-                            style: TextStyle(
-                              color: Colors.blue[700],
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                request.description,
-                style: TextStyle(color: Colors.grey[700]),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  const Icon(Icons.work_outline, size: 20),
-                  const SizedBox(width: 8),
-                  Text(request.serviceType),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.location_on_outlined, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(request.address)),
-                ],
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => SendQuotationPage(request: request),
-                    ),
-                  ).then((_) => _loadDataAndUpdateLocation());
-                },
-                icon: const Icon(Icons.send),
-                label: const Text('Enviar Cotización'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   @override
@@ -418,7 +319,14 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
                       width: 120,
                       height: 120,
                       child: GestureDetector(
-                        onTap: () => _showRequestDetail(request, distance),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => RequestDetailPage(requestId: request.id),
+                            ),
+                          );
+                        },
                         child: Column(
                           children: [
                             Container(
@@ -518,7 +426,14 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
-        onTap: () => _showRequestDetail(request, distance),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RequestDetailPage(requestId: request.id),
+            ),
+          );
+        },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),

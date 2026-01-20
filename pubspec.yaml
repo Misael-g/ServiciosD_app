@@ -45,6 +45,7 @@ dependencies:
   
   # HTTP (si necesitas hacer peticiones adicionales)
   http: ^1.2.2
+  timeago: ^3.7.0  # Para "hace 5 minutos"
 
 dev_dependencies:
   flutter_test:

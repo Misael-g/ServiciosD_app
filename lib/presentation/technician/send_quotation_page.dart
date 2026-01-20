@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../data/datasources/quotations_remote_ds.dart';
 import '../../data/models/service_request_model.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/snackbar_helper.dart';
+import '../../core/config/supabase_config.dart';
 
-/// Pantalla para enviar cotización
+/// Pantalla para enviar cotización (técnico)
 class SendQuotationPage extends StatefulWidget {
-  final ServiceRequestModel request;
+  final ServiceRequestModel serviceRequest;
 
   const SendQuotationPage({
     super.key,
-    required this.request,
+    required this.serviceRequest,
   });
 
   @override
@@ -19,30 +21,57 @@ class SendQuotationPage extends StatefulWidget {
 
 class _SendQuotationPageState extends State<SendQuotationPage> {
   final _formKey = GlobalKey<FormState>();
-  final _priceController = TextEditingController();
+  final _laborCostController = TextEditingController();
+  final _materialsCostController = TextEditingController();
   final _durationController = TextEditingController();
   final _descriptionController = TextEditingController();
 
   final QuotationsRemoteDataSource _quotationsDS = QuotationsRemoteDataSource();
+
   bool _isLoading = false;
+  double _totalPrice = 0.0;
 
   @override
   void dispose() {
-    _priceController.dispose();
+    _laborCostController.dispose();
+    _materialsCostController.dispose();
     _durationController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
+  void _calculateTotal() {
+    final labor = double.tryParse(_laborCostController.text) ?? 0.0;
+    final materials = double.tryParse(_materialsCostController.text) ?? 0.0;
+    
+    setState(() {
+      _totalPrice = labor + materials;
+    });
+  }
+
   Future<void> _sendQuotation() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_totalPrice <= 0) {
+      SnackbarHelper.showError(
+        context,
+        'El precio total debe ser mayor a 0',
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
+      final technicianId = SupabaseConfig.currentUserId;
+      if (technicianId == null) {
+        throw Exception('No se pudo obtener el ID del técnico');
+      }
+
+      // Crear cotización
       await _quotationsDS.createQuotation(
-        serviceRequestId: widget.request.id,
-        estimatedPrice: double.parse(_priceController.text),
+        serviceRequestId: widget.serviceRequest.id,
+        estimatedPrice: _totalPrice,
         estimatedDuration: int.parse(_durationController.text),
         description: _descriptionController.text.trim(),
       );
@@ -50,13 +79,16 @@ class _SendQuotationPageState extends State<SendQuotationPage> {
       if (mounted) {
         SnackbarHelper.showSuccess(
           context,
-          '¡Cotización enviada! El cliente la revisará pronto.',
+          '¡Cotización enviada exitosamente!',
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true); // Regresar con true
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.showError(context, 'Error al enviar cotización: $e');
+        SnackbarHelper.showError(
+          context,
+          'Error al enviar cotización: $e',
+        );
       }
     } finally {
       if (mounted) {
@@ -76,104 +108,214 @@ class _SendQuotationPageState extends State<SendQuotationPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Info del servicio
+            // Info de la solicitud
             Card(
+              color: Colors.blue.shade50,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      widget.request.title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(widget.request.description),
-                    const SizedBox(height: 12),
                     Row(
                       children: [
-                        const Icon(Icons.location_on, size: 16),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            widget.request.address,
-                            style: TextStyle(color: Colors.grey[600]),
+                        const Icon(Icons.info_outline, color: Colors.blue),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Solicitud',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.serviceRequest.title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.serviceRequest.description,
+                      style: TextStyle(color: Colors.grey[700]),
                     ),
                   ],
                 ),
               ),
             ),
+
             const SizedBox(height: 24),
 
-            // Formulario de cotización
-            Text(
-              'Detalles de la Cotización',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _priceController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Precio Estimado',
-                prefixText: '\$ ',
-                hintText: '50.00',
+            // Título de desglose
+            const Text(
+              'Desglose de Costos',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
-              validator: Validators.validatePrice,
-              enabled: !_isLoading,
             ),
             const SizedBox(height: 16),
 
+            // Mano de obra
+            TextFormField(
+              controller: _laborCostController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'Mano de Obra',
+                prefixIcon: Icon(Icons.build),
+                prefixText: '\$ ',
+                helperText: 'Costo de tu trabajo',
+              ),
+              validator: (value) => Validators.validateRequired(value, 'Mano de Obra'),
+              onChanged: (_) => _calculateTotal(),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Materiales
+            TextFormField(
+              controller: _materialsCostController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'Materiales',
+                prefixIcon: Icon(Icons.shopping_cart),
+                prefixText: '\$ ',
+                helperText: 'Costo de materiales necesarios',
+              ),
+              validator: (value) => Validators.validateRequired(value, 'Materiales'),
+              onChanged: (_) => _calculateTotal(),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Total
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green, width: 2),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'PRECIO TOTAL',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                  Text(
+                    '\$${_totalPrice.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Duración estimada
             TextFormField(
               controller: _durationController,
               keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+              ],
               decoration: const InputDecoration(
-                labelText: 'Duración Estimada (minutos)',
-                hintText: '120',
+                labelText: 'Duración Estimada',
+                prefixIcon: Icon(Icons.access_time),
+                suffixText: 'minutos',
+                helperText: 'Tiempo que tardarás en completar el trabajo',
               ),
-              validator: Validators.validateDuration,
-              enabled: !_isLoading,
+              validator: (value) => Validators.validateRequired(value, 'Duración'),
             ),
+
             const SizedBox(height: 16),
 
+            // Descripción del trabajo
             TextFormField(
               controller: _descriptionController,
               maxLines: 5,
+              maxLength: 500,
               decoration: const InputDecoration(
                 labelText: 'Descripción del Trabajo',
-                hintText: 'Detalla qué incluye tu servicio...',
+                hintText: 'Explica qué incluye tu servicio y cómo resolverás el problema...',
                 alignLabelWithHint: true,
+                helperText: 'Describe lo que harás para resolver el problema',
               ),
-              validator: (value) => Validators.validateDescription(value),
-              enabled: !_isLoading,
+              validator: (value) => Validators.validateRequired(value, 'Descripción'),
             ),
-            const SizedBox(height: 32),
 
-            ElevatedButton(
+            const SizedBox(height: 24),
+
+            // Botón enviar
+            ElevatedButton.icon(
               onPressed: _isLoading ? null : _sendQuotation,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: _isLoading
+              icon: _isLoading
                   ? const SizedBox(
-                      height: 20,
                       width: 20,
+                      height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Text('Enviar Cotización'),
+                  : const Icon(Icons.send),
+              label: Text(_isLoading ? 'Enviando...' : 'Enviar Cotización'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                textStyle: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Nota informativa
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lightbulb_outline, color: Colors.amber),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'El cliente podrá ver tu cotización y compararla con otras. '
+                      'Asegúrate de ser competitivo y detallado.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
