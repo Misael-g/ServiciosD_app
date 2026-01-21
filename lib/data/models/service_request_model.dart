@@ -30,14 +30,18 @@ class ServiceRequestModel extends ServiceRequest {
       location = LocationHelper.parsePostGISPoint(json['location']);
     }
 
+    // 🔍 NUEVO: También leer latitude/longitude directos
+    final lat = json['latitude'] as double?;
+    final lng = json['longitude'] as double?;
+
     return ServiceRequestModel(
       id: json['id'] as String,
       clientId: json['client_id'] as String,
       title: json['title'] as String,
       description: json['description'] as String,
       serviceType: json['service_type'] as String,
-      latitude: location?['latitude'] ?? 0.0,
-      longitude: location?['longitude'] ?? 0.0,
+      latitude: lat ?? location?['latitude'] ?? 0.0, // ✅ Priorizar latitude directo
+      longitude: lng ?? location?['longitude'] ?? 0.0, // ✅ Priorizar longitude directo
       address: json['address'] as String,
       status: json['status'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),

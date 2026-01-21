@@ -306,16 +306,20 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
                   ),
 
                   // Marcadores de solicitudes
-                  ..._requests.map((request) {
+                  ..._requests.where((request) {
+                    // 🔍 DEBUG: Imprimir coordenadas para verificar
+                    print('📍 Request ${request.id}: lat=${request.latitude}, lng=${request.longitude}');
+                    return request.latitude != null && request.longitude != null;
+                  }).map((request) {
                     final distance = LocationHelper.calculateDistance(
                       _currentPosition!.latitude,
                       _currentPosition!.longitude,
-                      request.latitude,
-                      request.longitude,
+                      request.latitude!,
+                      request.longitude!,
                     );
 
                     return Marker(
-                      point: LatLng(request.latitude, request.longitude),
+                      point: LatLng(request.latitude!, request.longitude!),
                       width: 120,
                       height: 120,
                       child: GestureDetector(
