@@ -9,7 +9,6 @@ import '../../core/utils/location_helper.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/constants/service_states.dart';
 import '../../core/config/supabase_config.dart';
-import 'send_quotation_page.dart';
 import '../client/request_detail_page.dart';
 
 /// Pantalla de solicitudes disponibles con mapa para el técnico
@@ -309,13 +308,13 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
                   ..._requests.where((request) {
                     // 🔍 DEBUG: Imprimir coordenadas para verificar
                     print('📍 Request ${request.id}: lat=${request.latitude}, lng=${request.longitude}');
-                    return request.latitude != null && request.longitude != null;
+                    return request.latitude != 0.0 && request.longitude != 0.0;
                   }).map((request) {
                     final distance = LocationHelper.calculateDistance(
                       _currentPosition!.latitude,
                       _currentPosition!.longitude,
-                      request.latitude!,
-                      request.longitude!,
+                      request.latitude,
+                      request.longitude,
                     );
 
                     return Marker(

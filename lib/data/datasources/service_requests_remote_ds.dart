@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
 import '../models/service_request_model.dart';
@@ -32,9 +33,9 @@ class ServiceRequestsRemoteDataSource {
             'client_id': userId,
             'title': title,
             'description': description,
-            'service_type': serviceType, // ← IMPORTANTE: nombre correcto
-            'latitude': latitude,        // ← AGREGAR
-            'longitude': longitude,      // ← AGREGAR
+            'service_type': serviceType, 
+            'latitude': latitude,       
+            'longitude': longitude,      
             'location': 'POINT($longitude $latitude)',
             'address': address,
             'status': 'pending',
@@ -164,20 +165,92 @@ class ServiceRequestsRemoteDataSource {
     int radiusMeters = 10000,
   }) async {
     try {
-      final response = await _supabase.rpc(
-        'get_all_nearby_requests',
-        params: {
-          'tech_location': 'POINT($longitude $latitude)',
-          'radius_meters': radiusMeters,
-        },
-      );
+      print('📍 [SERVICE_REQUESTS_DS] Buscando solicitudes cercanas');
+      print('   Ubicación técnico: lat=$latitude, lon=$longitude');
+      print('   Radio: ${radiusMeters}m');
 
-      if (response == null) return [];
+      // Intentar usar función RPC
+      try {
+        final response = await _supabase.rpc(
+          'get_all_nearby_requests',
+          params: {
+            'tech_location': 'POINT($longitude $latitude)',
+            'radius_meters': radiusMeters,
+          },
+        );
 
-      return (response as List)
-          .map((json) => ServiceRequestModel.fromJson(json as Map<String, dynamic>))
+        if (response != null) {
+          print('✅ [SERVICE_REQUESTS_DS] Solicitudes obtenidas vía RPC');
+          final requests = (response as List)
+              .map((json) => ServiceRequestModel.fromJson(json as Map<String, dynamic>))
+              .toList();
+
+          // Log de cada solicitud
+          for (var request in requests) {
+            print('📍 Request ${request.id}: lat=${request.latitude}, lng=${request.longitude}');
+          }
+
+          return requests;
+        }
+      } catch (rpcError) {
+        print('⚠️ [SERVICE_REQUESTS_DS] Función RPC no disponible: $rpcError');
+        print('   Usando filtro básico...');
+      }
+
+      // FALLBACK: Si RPC falla, obtener directamente con SELECT
+      print('🔄 [SERVICE_REQUESTS_DS] Usando query SELECT directo');
+      
+      final response = await _supabase
+          .from('service_requests')
+          .select('*, latitude, longitude') // ← IMPORTANTE: Incluir latitude y longitude
+          .inFilter('status', ['pending', 'quotation_sent'])
+          .not('latitude', 'is', null)
+          .not('longitude', 'is', null)
+          .order('created_at', ascending: false)
+          .limit(50);
+
+      print('✅ [SERVICE_REQUESTS_DS] Query directo ejecutado');
+      
+      final requests = (response as List)
+          .map((json) {
+            print('🔍 JSON recibido: ${json.keys}');
+            return ServiceRequestModel.fromJson(json as Map<String, dynamic>);
+          })
           .toList();
+
+      // Filtrar por distancia manualmente
+      final filteredRequests = requests.where((request) {
+        if (request.latitude == 0.0 || request.longitude == 0.0) {
+          print('⚠️ Request ${request.id} sin coordenadas válidas');
+          return false;
+        }
+
+        // Calcular distancia usando fórmula de Haversine
+        final distance = _calculateDistance(
+          latitude,
+          longitude,
+          request.latitude,
+          request.longitude,
+        );
+
+        final withinRadius = distance <= radiusMeters;
+        print('📍 Request ${request.id}: ${withinRadius ? "✅" : "❌"} ${distance.toStringAsFixed(0)}m');
+
+        return withinRadius;
+      }).toList();
+
+      // Ordenar por distancia
+      filteredRequests.sort((a, b) {
+        final distA = _calculateDistance(latitude, longitude, a.latitude, a.longitude);
+        final distB = _calculateDistance(latitude, longitude, b.latitude, b.longitude);
+        return distA.compareTo(distB);
+      });
+
+      print('✅ [SERVICE_REQUESTS_DS] ${filteredRequests.length} solicitudes dentro del radio');
+
+      return filteredRequests;
     } catch (e) {
+      print('❌ [SERVICE_REQUESTS_DS] Error: $e');
       throw Exception('Error al obtener solicitudes cercanas: $e');
     }
   }
@@ -305,5 +378,31 @@ class ServiceRequestsRemoteDataSource {
     } catch (e) {
       return false;
     }
+  }
+
+  /// Calcular distancia entre dos puntos (Haversine)
+  /// Retorna distancia en metros
+  double _calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const R = 6371000; // Radio de la Tierra en metros
+    final dLat = _toRadians(lat2 - lat1);
+    final dLon = _toRadians(lon2 - lon1);
+
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(lat1)) *
+            math.cos(_toRadians(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return R * c;
+  }
+
+  double _toRadians(double degrees) {
+    return degrees * math.pi / 180;
   }
 }
