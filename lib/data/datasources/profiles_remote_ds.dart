@@ -303,6 +303,16 @@ class ProfilesRemoteDataSource {
 
         if (response != null) {
           print('✅ [PROFILES_DS] Técnicos obtenidos vía RPC');
+          
+          // 🔍 DEBUG: Ver el JSON crudo
+          for (var json in (response as List)) {
+            print('📦 JSON crudo del técnico:');
+            print('   latitude: ${json['latitude']} (tipo: ${json['latitude'].runtimeType})');
+            print('   longitude: ${json['longitude']} (tipo: ${json['longitude'].runtimeType})');
+            print('   location: ${json['location']}');
+            print('   full_name: ${json['full_name']}');
+          }
+          
           final technicians = (response as List)
               .map((json) => ProfileModel.fromJson(json as Map<String, dynamic>))
               .toList();

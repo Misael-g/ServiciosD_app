@@ -30,10 +30,20 @@ class ProfileModel extends Profile {
 
   /// Crear ProfileModel desde JSON (Supabase)
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
-    // Parsear ubicación desde PostGIS si existe
-    Map<String, double>? location;
-    if (json['location'] != null) {
-      location = LocationHelper.parsePostGISPoint(json['location']);
+    // 🔧 SOLUCIÓN: Priorizar latitude/longitude directos
+    double? lat;
+    double? lng;
+
+    // Opción 1: Usar campos directos si existen (desde RPC)
+    if (json['latitude'] != null && json['longitude'] != null) {
+      lat = (json['latitude'] as num).toDouble();
+      lng = (json['longitude'] as num).toDouble();
+    } 
+    // Opción 2: Parsear desde campo 'location' PostGIS si existe
+    else if (json['location'] != null) {
+      final location = LocationHelper.parsePostGISPoint(json['location']);
+      lat = location?['latitude'];
+      lng = location?['longitude'];
     }
 
     return ProfileModel(
@@ -63,9 +73,9 @@ class ProfileModel extends Profile {
           ? DateTime.parse(json['verified_at'] as String)
           : null,
 
-      // Geolocalización
-      latitude: location?['latitude'],
-      longitude: location?['longitude'],
+      // ✅ Usar las coordenadas obtenidas
+      latitude: lat,
+      longitude: lng,
       address: json['address'] as String?,
 
       // Métricas
