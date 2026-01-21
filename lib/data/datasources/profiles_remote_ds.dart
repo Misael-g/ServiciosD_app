@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
 import '../models/profile_model.dart';
@@ -151,8 +152,8 @@ class ProfilesRemoteDataSource {
     print('   Address: ${address ?? "no proporcionada"}');
     
     final fields = <String, dynamic>{
-      'latitude': latitude,                      // ✅ AGREGAR
-      'longitude': longitude,                    // ✅ AGREGAR
+      'latitude': latitude,
+      'longitude': longitude,
       'location': 'POINT($longitude $latitude)',
     };
 
@@ -165,7 +166,7 @@ class ProfilesRemoteDataSource {
     return updateProfileFields(userId, fields);
   }
 
-  /// Obtener técnicos cercanos
+  /// Obtener técnicos cercanos (con filtro de especialidad)
   Future<List<ProfileModel>> getNearbyTechnicians({
     required double latitude,
     required double longitude,
@@ -173,36 +174,109 @@ class ProfilesRemoteDataSource {
     int radiusMeters = 10000,
   }) async {
     try {
-      print('🔵 [PROFILES_DS] Buscando técnicos cercanos');
+      print('🔵 [PROFILES_DS] Buscando técnicos cercanos por especialidad');
       print('   Tipo: $serviceType');
-      print('   Radio: $radiusMeters m');
+      print('   Ubicación: lat=$latitude, lon=$longitude');
+      print('   Radio: ${radiusMeters}m');
       
-      final response = await _supabase.rpc(
-        'get_nearby_technicians',
-        params: {
-          'client_location': 'POINT($longitude $latitude)',
-          'service_type': serviceType,
-          'radius_meters': radiusMeters,
-        },
-      );
+      // Intentar usar función RPC
+      try {
+        final response = await _supabase.rpc(
+          'get_nearby_technicians',
+          params: {
+            'client_location': 'POINT($longitude $latitude)',
+            'service_type': serviceType,
+            'radius_meters': radiusMeters,
+          },
+        );
 
-      if (response == null) {
-        print('⚠️ [PROFILES_DS] Respuesta null de RPC');
-        return [];
+        if (response != null) {
+          print('✅ [PROFILES_DS] Técnicos obtenidos vía RPC');
+          final technicians = (response as List)
+              .map((json) => ProfileModel.fromJson(json as Map<String, dynamic>))
+              .toList();
+
+          for (var tech in technicians) {
+            print('👤 ${tech.fullName}: lat=${tech.latitude}, lng=${tech.longitude}');
+          }
+
+          print('✅ [PROFILES_DS] ${technicians.length} técnicos encontrados');
+          return technicians;
+        }
+      } catch (rpcError) {
+        print('⚠️ [PROFILES_DS] Función RPC no disponible: $rpcError');
+        print('   Usando filtro básico...');
       }
 
-      final technicians = (response as List)
-          .map((json) => ProfileModel.fromJson(json as Map<String, dynamic>))
+      // FALLBACK: Si RPC falla, usar SELECT directo
+      print('🔄 [PROFILES_DS] Usando query SELECT directo');
+      
+      final response = await _supabase
+          .from('profiles')
+          .select('*, latitude, longitude')
+          .eq('role', 'technician')
+          .eq('verification_status', 'approved')
+          .not('latitude', 'is', null)
+          .not('longitude', 'is', null)
+          .limit(50);
+
+      print('✅ [PROFILES_DS] Query directo ejecutado');
+
+      final allTechnicians = (response as List)
+          .map((json) {
+            print('🔍 JSON recibido: ${json.keys}');
+            return ProfileModel.fromJson(json as Map<String, dynamic>);
+          })
           .toList();
 
-      print('✅ [PROFILES_DS] ${technicians.length} técnicos encontrados');
-      return technicians;
+      // Filtrar por especialidad y distancia
+      final filteredTechnicians = allTechnicians.where((tech) {
+        // Verificar coordenadas válidas
+        if (tech.latitude == null || tech.longitude == null) {
+          print('⚠️ Técnico ${tech.fullName} sin coordenadas válidas');
+          return false;
+        }
+
+        if (tech.latitude == 0.0 || tech.longitude == 0.0) {
+          print('⚠️ Técnico ${tech.fullName} con coordenadas 0.0');
+          return false;
+        }
+
+        // Verificar especialidad
+        final hasSpecialty = tech.specialties?.contains(serviceType) ?? false;
+        if (!hasSpecialty) {
+          return false;
+        }
+
+        // Calcular distancia
+        final distance = _calculateDistance(
+          latitude,
+          longitude,
+          tech.latitude!,
+          tech.longitude!,
+        );
+
+        final withinRadius = distance <= radiusMeters;
+        print('👤 ${tech.fullName}: ${withinRadius ? "✅" : "❌"} ${distance.toStringAsFixed(0)}m');
+
+        return withinRadius;
+      }).toList();
+
+      // Ordenar por distancia
+      filteredTechnicians.sort((a, b) {
+        final distA = _calculateDistance(latitude, longitude, a.latitude!, a.longitude!);
+        final distB = _calculateDistance(latitude, longitude, b.latitude!, b.longitude!);
+        return distA.compareTo(distB);
+      });
+
+      print('✅ [PROFILES_DS] ${filteredTechnicians.length} técnicos dentro del radio');
+      return filteredTechnicians;
       
     } catch (e, stackTrace) {
       print('❌ [PROFILES_DS] Error al obtener técnicos cercanos:');
       print('   Error: $e');
       print('   StackTrace: $stackTrace');
-      throw Exception('Error al obtener técnicos cercanos: $e');
+      return [];
     }
   }
 
@@ -213,6 +287,10 @@ class ProfilesRemoteDataSource {
     int radiusMeters = 10000,
   }) async {
     try {
+      print('📍 [PROFILES_DS] Buscando TODOS los técnicos cercanos');
+      print('   Ubicación cliente: lat=$latitude, lon=$longitude');
+      print('   Radio: ${radiusMeters}m');
+
       // Intentar usar función RPC si existe
       try {
         final response = await _supabase.rpc(
@@ -223,32 +301,121 @@ class ProfilesRemoteDataSource {
           },
         );
 
-        if (response == null) return [];
+        if (response != null) {
+          print('✅ [PROFILES_DS] Técnicos obtenidos vía RPC');
+          final technicians = (response as List)
+              .map((json) => ProfileModel.fromJson(json as Map<String, dynamic>))
+              .toList();
 
-        return (response as List)
-            .map((json) => ProfileModel.fromJson(json as Map<String, dynamic>))
-            .toList();
-      } catch (e) {
-        print('⚠️ [PROFILES_DS] Función RPC no disponible, usando filtro básico');
-        
-        // Fallback: Obtener todos los técnicos verificados
-        final response = await _supabase
-            .from('profiles')
-            .select()
-            .eq('role', 'technician')
-            .eq('verification_status', 'approved')
-            .not('latitude', 'is', null)
-            .not('longitude', 'is', null)
-            .limit(50);
+          // Log de cada técnico
+          for (var tech in technicians) {
+            print('👤 Técnico ${tech.fullName}: lat=${tech.latitude}, lng=${tech.longitude}');
+          }
 
-        return (response as List)
-            .map((json) => ProfileModel.fromJson(json as Map<String, dynamic>))
-            .toList();
+          print('✅ [PROFILES_DS] ${technicians.length} técnicos encontrados vía RPC');
+          return technicians;
+        }
+      } catch (rpcError) {
+        print('⚠️ [PROFILES_DS] Función RPC no disponible: $rpcError');
+        print('   Usando filtro básico...');
       }
-    } catch (e) {
-      print('❌ [PROFILES_DS] Error al obtener técnicos: $e');
+
+      // FALLBACK: Si RPC falla, obtener directamente con SELECT
+      print('🔄 [PROFILES_DS] Usando query SELECT directo');
+      
+      final response = await _supabase
+          .from('profiles')
+          .select('*, latitude, longitude') // ← CRÍTICO: Incluir latitude y longitude
+          .eq('role', 'technician')
+          .eq('verification_status', 'approved')
+          .not('latitude', 'is', null)
+          .not('longitude', 'is', null)
+          .limit(50);
+
+      print('✅ [PROFILES_DS] Query directo ejecutado');
+      print('   Registros recibidos: ${(response as List).length}');
+      
+      final technicians = (response as List)
+          .map((json) {
+            print('🔍 JSON keys: ${json.keys}');
+            print('   ID: ${json['id']}');
+            print('   Nombre: ${json['full_name']}');
+            print('   Latitude: ${json['latitude']}');
+            print('   Longitude: ${json['longitude']}');
+            return ProfileModel.fromJson(json as Map<String, dynamic>);
+          })
+          .toList();
+
+      print('✅ [PROFILES_DS] ${technicians.length} técnicos parseados');
+
+      // Filtrar por distancia manualmente
+      final filteredTechnicians = technicians.where((tech) {
+        if (tech.latitude == null || tech.longitude == null) {
+          print('⚠️ Técnico ${tech.fullName} sin coordenadas válidas (null)');
+          return false;
+        }
+
+        if (tech.latitude == 0.0 || tech.longitude == 0.0) {
+          print('⚠️ Técnico ${tech.fullName} con coordenadas 0.0');
+          return false;
+        }
+
+        // Calcular distancia usando fórmula de Haversine
+        final distance = _calculateDistance(
+          latitude,
+          longitude,
+          tech.latitude!,
+          tech.longitude!,
+        );
+
+        final withinRadius = distance <= radiusMeters;
+        print('👤 Técnico ${tech.fullName}: ${withinRadius ? "✅" : "❌"} ${distance.toStringAsFixed(0)}m (${(distance/1000).toStringAsFixed(1)}km)');
+
+        return withinRadius;
+      }).toList();
+
+      // Ordenar por distancia
+      filteredTechnicians.sort((a, b) {
+        final distA = _calculateDistance(latitude, longitude, a.latitude!, a.longitude!);
+        final distB = _calculateDistance(latitude, longitude, b.latitude!, b.longitude!);
+        return distA.compareTo(distB);
+      });
+
+      print('✅ [PROFILES_DS] ${filteredTechnicians.length} técnicos dentro del radio de ${radiusMeters}m');
+
+      return filteredTechnicians;
+    } catch (e, stackTrace) {
+      print('❌ [PROFILES_DS] Error al obtener técnicos:');
+      print('   Error: $e');
+      print('   StackTrace: $stackTrace');
       return [];
     }
+  }
+
+  /// Calcular distancia entre dos puntos (Haversine)
+  /// Retorna distancia en metros
+  double _calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const R = 6371000; // Radio de la Tierra en metros
+    final dLat = _toRadians(lat2 - lat1);
+    final dLon = _toRadians(lon2 - lon1);
+
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(lat1)) *
+            math.cos(_toRadians(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return R * c;
+  }
+
+  double _toRadians(double degrees) {
+    return degrees * math.pi / 180;
   }
 
   /// Obtener técnicos pendientes de verificación (Solo admin)
