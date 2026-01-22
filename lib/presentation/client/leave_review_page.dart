@@ -6,6 +6,7 @@ import '../../data/models/profile_model.dart';
 import '../../core/utils/snackbar_helper.dart';
 
 /// Pantalla para dejar reseña al técnico (Cliente)
+/// Compatible con ratings detallados (punctuality, quality, communication)
 class LeaveReviewPage extends StatefulWidget {
   final ServiceRequestModel serviceRequest;
   final ProfileModel technician;
@@ -25,7 +26,10 @@ class _LeaveReviewPageState extends State<LeaveReviewPage> {
   final _commentController = TextEditingController();
   final ReviewsRemoteDataSource _reviewsDS = ReviewsRemoteDataSource();
 
-  double _rating = 5.0;
+  double _overallRating = 5.0;
+  int _punctualityRating = 5;
+  int _qualityRating = 5;
+  int _communicationRating = 5;
   bool _isLoading = false;
 
   @override
@@ -37,7 +41,7 @@ class _LeaveReviewPageState extends State<LeaveReviewPage> {
   Future<void> _submitReview() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_rating < 1) {
+    if (_overallRating < 1) {
       SnackbarHelper.showError(context, 'Debes dar al menos 1 estrella');
       return;
     }
@@ -47,14 +51,18 @@ class _LeaveReviewPageState extends State<LeaveReviewPage> {
     try {
       print('📤 [LEAVE_REVIEW] Enviando reseña');
       print('   Técnico: ${widget.technician.id}');
-      print('   Rating: $_rating');
-      print('   Solicitud: ${widget.serviceRequest.id}');
+      print('   Rating general: $_overallRating');
+      print('   Puntualidad: $_punctualityRating');
+      print('   Calidad: $_qualityRating');
+      print('   Comunicación: $_communicationRating');
 
       await _reviewsDS.createReview(
-        technicianId: widget.technician.id,
         serviceRequestId: widget.serviceRequest.id,
-        rating: _rating,
+        rating: _overallRating,
         comment: _commentController.text.trim(),
+        punctualityRating: _punctualityRating,
+        qualityRating: _qualityRating,
+        communicationRating: _communicationRating,
       );
 
       print('✅ [LEAVE_REVIEW] Reseña enviada exitosamente');
@@ -71,7 +79,7 @@ class _LeaveReviewPageState extends State<LeaveReviewPage> {
       if (mounted) {
         SnackbarHelper.showError(
           context,
-          'Error al enviar reseña: $e',
+          'Error al enviar reseña',
         );
       }
     } finally {
@@ -94,123 +102,26 @@ class _LeaveReviewPageState extends State<LeaveReviewPage> {
           padding: const EdgeInsets.all(16),
           children: [
             // Info del técnico
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: Colors.blue,
-                      backgroundImage: widget.technician.profilePictureUrl != null
-                          ? NetworkImage(widget.technician.profilePictureUrl!)
-                          : null,
-                      child: widget.technician.profilePictureUrl == null
-                          ? Text(
-                              widget.technician.fullName[0].toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 32,
-                                color: Colors.white,
-                              ),
-                            )
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      widget.technician.fullName,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (widget.technician.averageRating != null) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 20),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${widget.technician.averageRating!.toStringAsFixed(1)} ',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            '(${widget.technician.totalReviews ?? 0} reseñas)',
-                            style: TextStyle(color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-
+            _buildTechnicianCard(),
             const SizedBox(height: 24),
 
             // Servicio realizado
-            Card(
-              color: Colors.blue.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.build, color: Colors.blue),
-                        SizedBox(width: 8),
-                        Text(
-                          'Servicio Realizado',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.serviceRequest.title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.serviceRequest.description,
-                      style: TextStyle(color: Colors.grey[700]),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
+            _buildServiceCard(),
             const SizedBox(height: 32),
 
-            // Título de calificación
+            // Calificación general
             const Text(
-              '¿Cómo calificarías el servicio?',
+              'Calificación General',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
-              textAlign: TextAlign.center,
             ),
-
             const SizedBox(height: 16),
 
-            // Rating bar
             Center(
               child: RatingBar.builder(
-                initialRating: _rating,
+                initialRating: _overallRating,
                 minRating: 1,
                 direction: Axis.horizontal,
                 allowHalfRating: true,
@@ -222,23 +133,59 @@ class _LeaveReviewPageState extends State<LeaveReviewPage> {
                   color: Colors.amber,
                 ),
                 onRatingUpdate: (rating) {
-                  setState(() => _rating = rating);
+                  setState(() => _overallRating = rating);
                 },
               ),
             ),
 
             const SizedBox(height: 8),
 
-            // Texto de rating
             Center(
               child: Text(
-                _getRatingText(_rating),
+                _getRatingText(_overallRating),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: _getRatingColor(_rating),
+                  color: _getRatingColor(_overallRating),
                 ),
               ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Ratings detallados
+            const Text(
+              'Calificaciones Específicas',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            _buildDetailedRating(
+              'Puntualidad',
+              Icons.schedule,
+              _punctualityRating,
+              (value) => setState(() => _punctualityRating = value.toInt()),
+            ),
+
+            const SizedBox(height: 16),
+
+            _buildDetailedRating(
+              'Calidad del Trabajo',
+              Icons.verified,
+              _qualityRating,
+              (value) => setState(() => _qualityRating = value.toInt()),
+            ),
+
+            const SizedBox(height: 16),
+
+            _buildDetailedRating(
+              'Comunicación',
+              Icons.chat_bubble,
+              _communicationRating,
+              (value) => setState(() => _communicationRating = value.toInt()),
             ),
 
             const SizedBox(height: 32),
@@ -266,7 +213,6 @@ class _LeaveReviewPageState extends State<LeaveReviewPage> {
                 ),
                 filled: true,
                 fillColor: Colors.grey[50],
-                counterText: '${_commentController.text.length}/500',
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
@@ -337,6 +283,164 @@ class _LeaveReviewPageState extends State<LeaveReviewPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildTechnicianCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 40,
+              backgroundColor: Colors.blue,
+              backgroundImage: widget.technician.profilePictureUrl != null
+                  ? NetworkImage(widget.technician.profilePictureUrl!)
+                  : null,
+              child: widget.technician.profilePictureUrl == null
+                  ? Text(
+                      widget.technician.fullName[0].toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 32,
+                        color: Colors.white,
+                      ),
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              widget.technician.fullName,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (widget.technician.averageRating != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.star, color: Colors.amber, size: 20),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${widget.technician.averageRating!.toStringAsFixed(1)} ',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '(${widget.technician.totalReviews ?? 0} reseñas)',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildServiceCard() {
+    return Card(
+      color: Colors.blue.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.build, color: Colors.blue),
+                SizedBox(width: 8),
+                Text(
+                  'Servicio Realizado',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              widget.serviceRequest.title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              widget.serviceRequest.description,
+              style: TextStyle(color: Colors.grey[700]),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailedRating(
+    String label,
+    IconData icon,
+    int value,
+    Function(double) onChanged,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 20, color: Colors.grey[700]),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: Slider(
+                value: value.toDouble(),
+                min: 1,
+                max: 5,
+                divisions: 4,
+                label: '$value',
+                onChanged: onChanged,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              width: 40,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '$value',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

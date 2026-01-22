@@ -3,15 +3,18 @@ import '../../core/config/supabase_config.dart';
 import '../models/review_model.dart';
 
 /// Fuente de datos remota para reseñas
+/// Compatible con schema existente (reviewer_id, reviewed_id)
 class ReviewsRemoteDataSource {
   final SupabaseClient _supabase = SupabaseConfig.client;
 
-  /// Crear reseña
-  Future<ReviewModel> createReview({
-    required String technicianId,
+  /// Crear reseña usando función RPC
+  Future<void> createReview({
     required String serviceRequestId,
     required double rating,
     required String comment,
+    int? punctualityRating,
+    int? qualityRating,
+    int? communicationRating,
   }) async {
     try {
       final clientId = SupabaseConfig.currentUserId;
@@ -21,21 +24,20 @@ class ReviewsRemoteDataSource {
 
       print('📤 [REVIEWS_DS] Creando reseña');
       print('   Cliente: $clientId');
-      print('   Técnico: $technicianId');
       print('   Rating: $rating');
       print('   Solicitud: $serviceRequestId');
 
-      final response = await _supabase.from('reviews').insert({
-        'client_id': clientId,
-        'technician_id': technicianId,
-        'service_request_id': serviceRequestId,
-        'rating': rating,
-        'comment': comment,
-      }).select().single();
+      // Usar función RPC que maneja todo automáticamente
+      await _supabase.rpc('create_review', params: {
+        'p_service_request_id': serviceRequestId,
+        'p_rating': rating,
+        'p_comment': comment,
+        'p_punctuality_rating': punctualityRating,
+        'p_quality_rating': qualityRating,
+        'p_communication_rating': communicationRating,
+      });
 
-      print('✅ [REVIEWS_DS] Reseña creada: ${response['id']}');
-
-      return ReviewModel.fromJson(response);
+      print('✅ [REVIEWS_DS] Reseña creada exitosamente');
     } catch (e, stackTrace) {
       print('❌ [REVIEWS_DS] Error al crear reseña:');
       print('   Error: $e');
@@ -44,7 +46,7 @@ class ReviewsRemoteDataSource {
     }
   }
 
-  /// Obtener reseñas de un técnico
+  /// Obtener reseñas de un técnico (reviewed_id)
   Future<List<ReviewModel>> getReviewsByTechnician(String technicianId) async {
     try {
       print('🔵 [REVIEWS_DS] Obteniendo reseñas del técnico: $technicianId');
@@ -52,7 +54,7 @@ class ReviewsRemoteDataSource {
       final response = await _supabase
           .from('reviews')
           .select()
-          .eq('technician_id', technicianId)
+          .eq('reviewed_id', technicianId)  // ← reviewed_id es el técnico
           .order('created_at', ascending: false);
 
       final reviews = (response as List)
@@ -84,7 +86,7 @@ class ReviewsRemoteDataSource {
           .from('reviews')
           .select('id')
           .eq('service_request_id', serviceRequestId)
-          .eq('client_id', clientId)
+          .eq('reviewer_id', clientId)  // ← reviewer_id es el cliente
           .maybeSingle();
 
       final exists = response != null;
@@ -111,7 +113,7 @@ class ReviewsRemoteDataSource {
           .from('reviews')
           .select()
           .eq('service_request_id', serviceRequestId)
-          .eq('client_id', clientId)
+          .eq('reviewer_id', clientId)  // ← reviewer_id es el cliente
           .maybeSingle();
 
       if (response == null) {
