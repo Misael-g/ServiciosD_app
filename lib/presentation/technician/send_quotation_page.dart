@@ -6,7 +6,7 @@ import '../../core/utils/validators.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/config/supabase_config.dart';
 
-/// Pantalla para enviar cotización (técnico)
+/// Pantalla para enviar cotización con desglose completo
 class SendQuotationPage extends StatefulWidget {
   final ServiceRequestModel serviceRequest;
 
@@ -24,26 +24,35 @@ class _SendQuotationPageState extends State<SendQuotationPage> {
   final _laborCostController = TextEditingController();
   final _materialsCostController = TextEditingController();
   final _durationController = TextEditingController();
+  final _arrivalTimeController = TextEditingController();
   final _descriptionController = TextEditingController();
 
   final QuotationsRemoteDataSource _quotationsDS = QuotationsRemoteDataSource();
 
   bool _isLoading = false;
   double _totalPrice = 0.0;
+  int _selectedArrivalHours = 1;
 
   @override
   void dispose() {
     _laborCostController.dispose();
     _materialsCostController.dispose();
     _durationController.dispose();
+    _arrivalTimeController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _arrivalTimeController.text = '1';
   }
 
   void _calculateTotal() {
     final labor = double.tryParse(_laborCostController.text) ?? 0.0;
     final materials = double.tryParse(_materialsCostController.text) ?? 0.0;
-    
+
     setState(() {
       _totalPrice = labor + materials;
     });
@@ -55,10 +64,64 @@ class _SendQuotationPageState extends State<SendQuotationPage> {
     if (_totalPrice <= 0) {
       SnackbarHelper.showError(
         context,
-        'El precio total debe ser mayor a 0',
+        'El precio total debe ser mayor a \$0',
       );
       return;
     }
+
+    // Confirmar envío
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar Cotización'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Estás a punto de enviar esta cotización:'),
+            const SizedBox(height: 16),
+            _buildConfirmationItem(
+              'Mano de Obra',
+              '\$${_laborCostController.text}',
+            ),
+            _buildConfirmationItem(
+              'Materiales',
+              '\$${_materialsCostController.text}',
+            ),
+            const Divider(),
+            _buildConfirmationItem(
+              'TOTAL',
+              '\$${_totalPrice.toStringAsFixed(2)}',
+              isTotal: true,
+            ),
+            const Divider(),
+            _buildConfirmationItem(
+              'Duración',
+              '${_durationController.text} min',
+            ),
+            _buildConfirmationItem(
+              'Tiempo de llegada',
+              '~${_selectedArrivalHours}h',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: const Text('Enviar Cotización'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
 
     setState(() => _isLoading = true);
 
@@ -68,13 +131,26 @@ class _SendQuotationPageState extends State<SendQuotationPage> {
         throw Exception('No se pudo obtener el ID del técnico');
       }
 
-      // Crear cotización
+      print('📤 [SEND_QUOTATION] Enviando cotización');
+      print('   Solicitud: ${widget.serviceRequest.id}');
+      print('   Técnico: $technicianId');
+      print('   Precio total: \$$_totalPrice');
+      print('   Mano de obra: \$${_laborCostController.text}');
+      print('   Materiales: \$${_materialsCostController.text}');
+      print('   Duración: ${_durationController.text} min');
+
+      // Crear cotización con desglose
       await _quotationsDS.createQuotation(
         serviceRequestId: widget.serviceRequest.id,
         estimatedPrice: _totalPrice,
+        laborCost: double.parse(_laborCostController.text),
+        materialsCost: double.parse(_materialsCostController.text),
         estimatedDuration: int.parse(_durationController.text),
+        estimatedArrivalTime: _selectedArrivalHours,
         description: _descriptionController.text.trim(),
       );
+
+      print('✅ [SEND_QUOTATION] Cotización enviada exitosamente');
 
       if (mounted) {
         SnackbarHelper.showSuccess(
@@ -84,6 +160,7 @@ class _SendQuotationPageState extends State<SendQuotationPage> {
         Navigator.pop(context, true); // Regresar con true
       }
     } catch (e) {
+      print('❌ [SEND_QUOTATION] Error: $e');
       if (mounted) {
         SnackbarHelper.showError(
           context,
@@ -97,11 +174,39 @@ class _SendQuotationPageState extends State<SendQuotationPage> {
     }
   }
 
+  Widget _buildConfirmationItem(String label, String value,
+      {bool isTotal = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+              fontSize: isTotal ? 16 : 14,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+              fontSize: isTotal ? 18 : 14,
+              color: isTotal ? Colors.green : Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Enviar Cotización'),
+        backgroundColor: Colors.green,
       ),
       body: Form(
         key: _formKey,
@@ -109,70 +214,54 @@ class _SendQuotationPageState extends State<SendQuotationPage> {
           padding: const EdgeInsets.all(16),
           children: [
             // Info de la solicitud
-            Card(
-              color: Colors.blue.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.info_outline, color: Colors.blue),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Solicitud',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.serviceRequest.title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.serviceRequest.description,
-                      style: TextStyle(color: Colors.grey[700]),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
+            _buildRequestInfo(),
             const SizedBox(height: 24),
 
             // Título de desglose
-            const Text(
-              'Desglose de Costos',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            const Row(
+              children: [
+                Icon(Icons.calculate, color: Colors.green),
+                SizedBox(width: 8),
+                Text(
+                  'Desglose de Costos',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 
             // Mano de obra
             TextFormField(
               controller: _laborCostController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
               ],
-              decoration: const InputDecoration(
-                labelText: 'Mano de Obra',
-                prefixIcon: Icon(Icons.build),
+              decoration: InputDecoration(
+                labelText: 'Mano de Obra 💪',
+                prefixIcon: const Icon(Icons.build),
                 prefixText: '\$ ',
                 helperText: 'Costo de tu trabajo',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[50],
               ),
-              validator: (value) => Validators.validateRequired(value, 'Mano de Obra'),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Ingresa el costo de mano de obra';
+                }
+                final amount = double.tryParse(value);
+                if (amount == null || amount < 0) {
+                  return 'Ingresa un valor válido';
+                }
+                return null;
+              },
               onChanged: (_) => _calculateTotal(),
             ),
 
@@ -181,17 +270,32 @@ class _SendQuotationPageState extends State<SendQuotationPage> {
             // Materiales
             TextFormField(
               controller: _materialsCostController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
               ],
-              decoration: const InputDecoration(
-                labelText: 'Materiales',
-                prefixIcon: Icon(Icons.shopping_cart),
+              decoration: InputDecoration(
+                labelText: 'Materiales 🛠️',
+                prefixIcon: const Icon(Icons.shopping_cart),
                 prefixText: '\$ ',
                 helperText: 'Costo de materiales necesarios',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[50],
               ),
-              validator: (value) => Validators.validateRequired(value, 'Materiales'),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Ingresa el costo de materiales';
+                }
+                final amount = double.tryParse(value);
+                if (amount == null || amount < 0) {
+                  return 'Ingresa un valor válido';
+                }
+                return null;
+              },
               onChanged: (_) => _calculateTotal(),
             ),
 
@@ -199,70 +303,183 @@ class _SendQuotationPageState extends State<SendQuotationPage> {
 
             // Total
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green, width: 2),
+                gradient: LinearGradient(
+                  colors: [Colors.green.shade400, Colors.green.shade600],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.green.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'PRECIO TOTAL',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'TOTAL',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        'Precio final',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                   Text(
                     '\$${_totalPrice.toStringAsFixed(2)}',
                     style: const TextStyle(
-                      fontSize: 24,
+                      color: Colors.white,
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green,
                     ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
 
-            // Duración estimada
+            // Tiempo estimado
+            const Row(
+              children: [
+                Icon(Icons.schedule, color: Colors.blue),
+                SizedBox(width: 8),
+                Text(
+                  'Tiempo Estimado',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Duración del trabajo
             TextFormField(
               controller: _durationController,
               keyboardType: TextInputType.number,
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
               ],
-              decoration: const InputDecoration(
-                labelText: 'Duración Estimada',
-                prefixIcon: Icon(Icons.access_time),
+              decoration: InputDecoration(
+                labelText: 'Duración del Trabajo ⏱️',
+                prefixIcon: const Icon(Icons.access_time),
                 suffixText: 'minutos',
-                helperText: 'Tiempo que tardarás en completar el trabajo',
+                helperText: '¿Cuánto tiempo tomará el trabajo?',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[50],
               ),
-              validator: (value) => Validators.validateRequired(value, 'Duración'),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Ingresa la duración estimada';
+                }
+                final duration = int.tryParse(value);
+                if (duration == null || duration <= 0) {
+                  return 'Ingresa un valor válido';
+                }
+                return null;
+              },
             ),
 
             const SizedBox(height: 16),
 
+            // Tiempo de llegada
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tiempo de Llegada 🚗',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '¿En cuánto tiempo puedes llegar?',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildArrivalTimeChip('30 min', 0.5),
+                    _buildArrivalTimeChip('1 hora', 1),
+                    _buildArrivalTimeChip('2 horas', 2),
+                    _buildArrivalTimeChip('3 horas', 3),
+                    _buildArrivalTimeChip('Mañana', 24),
+                  ],
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
             // Descripción del trabajo
+            const Row(
+              children: [
+                Icon(Icons.description, color: Colors.purple),
+                SizedBox(width: 8),
+                Text(
+                  'Descripción del Trabajo',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
             TextFormField(
               controller: _descriptionController,
               maxLines: 5,
               maxLength: 500,
-              decoration: const InputDecoration(
-                labelText: 'Descripción del Trabajo',
-                hintText: 'Explica qué incluye tu servicio y cómo resolverás el problema...',
-                alignLabelWithHint: true,
-                helperText: 'Describe lo que harás para resolver el problema',
+              decoration: InputDecoration(
+                hintText:
+                    'Describe brevemente qué harás, qué materiales usarás, etc.',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[50],
               ),
-              validator: (value) => Validators.validateRequired(value, 'Descripción'),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Agrega una descripción del trabajo';
+                }
+                if (value.trim().length < 20) {
+                  return 'La descripción debe tener al menos 20 caracteres';
+                }
+                return null;
+              },
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
 
             // Botón enviar
             ElevatedButton.icon(
@@ -276,50 +493,97 @@ class _SendQuotationPageState extends State<SendQuotationPage> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Icon(Icons.send),
-              label: Text(_isLoading ? 'Enviando...' : 'Enviar Cotización'),
+                  : const Icon(Icons.send, size: 24),
+              label: Text(
+                _isLoading ? 'Enviando...' : 'Enviar Cotización',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                textStyle: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
 
             const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
 
-            // Nota informativa
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.amber),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.lightbulb_outline, color: Colors.amber),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'El cliente podrá ver tu cotización y compararla con otras. '
-                      'Asegúrate de ser competitivo y detallado.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[800],
-                      ),
-                    ),
+  Widget _buildRequestInfo() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [Colors.blue.shade50, Colors.blue.shade100],
+          ),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.info_outline, color: Colors.blue, size: 28),
+                const SizedBox(width: 8),
+                const Text(
+                  'Solicitud',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
                   ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              widget.serviceRequest.title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              widget.serviceRequest.description,
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontSize: 14,
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildArrivalTimeChip(String label, double hours) {
+    final isSelected = _selectedArrivalHours == hours.toInt() ||
+        (hours == 0.5 && _selectedArrivalHours == 0);
+
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        if (selected) {
+          setState(() {
+            _selectedArrivalHours = hours == 0.5 ? 0 : hours.toInt();
+          });
+        }
+      },
+      selectedColor: Colors.blue.shade100,
+      checkmarkColor: Colors.blue,
     );
   }
 }

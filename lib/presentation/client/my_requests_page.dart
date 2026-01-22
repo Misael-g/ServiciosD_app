@@ -207,7 +207,8 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                   ),
                 ],
               ),
-              if (request.status == 'quotation_sent' || request.status == 'quoted') ...[const SizedBox(height: 12),
+              if (request.status == 'quotation_sent' || 
+                  request.status == 'quoted') ...[const SizedBox(height: 12),
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.push(

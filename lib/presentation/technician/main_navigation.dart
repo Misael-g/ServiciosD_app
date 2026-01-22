@@ -3,6 +3,7 @@ import 'home_page.dart';
 import 'available_requests_page.dart';
 import 'profile_page.dart';
 import 'verification_page.dart';
+import 'my_quotations_page.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
 import '../../core/utils/snackbar_helper.dart';
 
@@ -104,6 +105,39 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation> {
 
     return Scaffold(
       body: _pages[_currentIndex],
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              child: const Text(
+                'Menú',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.receipt_long),
+              title: const Text('Mis Cotizaciones'),
+              onTap: () {
+                Navigator.pop(context); // Cerrar drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MyQuotationsPage(),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {

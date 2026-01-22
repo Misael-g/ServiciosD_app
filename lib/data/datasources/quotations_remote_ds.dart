@@ -6,40 +6,50 @@ import '../models/quotation_model.dart';
 class QuotationsRemoteDataSource {
   final SupabaseClient _supabase = SupabaseConfig.client;
 
-  /// Crear cotización (Técnico)
+  /// Crear cotización con desglose completo
   Future<QuotationModel> createQuotation({
     required String serviceRequestId,
     required double estimatedPrice,
+    double? laborCost,                    // ← NUEVO
+    double? materialsCost,                // ← NUEVO
     required int estimatedDuration,
+    int? estimatedArrivalTime,            // ← NUEVO (en horas)
     required String description,
   }) async {
     try {
-      final userId = SupabaseConfig.currentUserId;
-      if (userId == null) {
-        throw Exception('No hay usuario autenticado');
+      final technicianId = SupabaseConfig.currentUserId;
+      if (technicianId == null) {
+        throw Exception('No hay técnico autenticado');
       }
 
-      final response = await _supabase
-          .from('quotations')
-          .insert({
-            'service_request_id': serviceRequestId,
-            'technician_id': userId,
-            'estimated_price': estimatedPrice,
-            'estimated_duration': estimatedDuration,
-            'description': description,
-            'status': 'pending',
-          })
-          .select()
-          .single();
+      print('📤 [QUOTATIONS_DS] Creando cotización');
+      print('   Solicitud: $serviceRequestId');
+      print('   Técnico: $technicianId');
+      print('   Precio: \$$estimatedPrice');
+      print('   Mano de obra: \$${laborCost ?? 0}');
+      print('   Materiales: \$${materialsCost ?? 0}');
+      print('   Duración: $estimatedDuration min');
+      print('   Llegada: ${estimatedArrivalTime ?? 'N/A'} horas');
 
-      // Actualizar estado de la solicitud
-      await _supabase
-          .from('service_requests')
-          .update({'status': 'quotation_sent'})
-          .eq('id', serviceRequestId);
+      final response = await _supabase.from('quotations').insert({
+        'service_request_id': serviceRequestId,
+        'technician_id': technicianId,
+        'estimated_price': estimatedPrice,
+        'labor_cost': laborCost,              // ← NUEVO
+        'materials_cost': materialsCost,      // ← NUEVO
+        'estimated_duration': estimatedDuration,
+        'estimated_arrival_time': estimatedArrivalTime,  // ← NUEVO
+        'description': description,
+        'status': 'pending',
+      }).select().single();
+
+      print('✅ [QUOTATIONS_DS] Cotización creada: ${response['id']}');
 
       return QuotationModel.fromJson(response);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ [QUOTATIONS_DS] Error al crear cotización:');
+      print('   Error: $e');
+      print('   StackTrace: $stackTrace');
       throw Exception('Error al crear cotización: $e');
     }
   }
@@ -267,6 +277,91 @@ class QuotationsRemoteDataSource {
           .toList();
     } catch (e) {
       throw Exception('Error al obtener cotizaciones aceptadas: $e');
+    }
+  }
+
+  /// Verificar si el técnico ya envió cotización para esta solicitud
+  Future<bool> hasQuotationForRequest(String serviceRequestId) async {
+    try {
+      final technicianId = SupabaseConfig.currentUserId;
+      if (technicianId == null) return false;
+
+      print('🔵 [QUOTATIONS_DS] Verificando cotización existente');
+      print('   Técnico: $technicianId');
+      print('   Solicitud: $serviceRequestId');
+
+      final response = await _supabase
+          .from('quotations')
+          .select('id')
+          .eq('service_request_id', serviceRequestId)
+          .eq('technician_id', technicianId)
+          .maybeSingle();
+
+      final exists = response != null;
+      print(exists ? '✅ Ya tiene cotización' : '✅ No tiene cotización');
+
+      return exists;
+    } catch (e) {
+      print('❌ [QUOTATIONS_DS] Error al verificar: $e');
+      return false;
+    }
+  }
+
+  /// Obtener cotización del técnico para una solicitud específica
+  Future<QuotationModel?> getMyQuotationForRequest(String serviceRequestId) async {
+    try {
+      final technicianId = SupabaseConfig.currentUserId;
+      if (technicianId == null) return null;
+
+      print('🔵 [QUOTATIONS_DS] Obteniendo mi cotización');
+      print('   Técnico: $technicianId');
+      print('   Solicitud: $serviceRequestId');
+
+      final response = await _supabase
+          .from('quotations')
+          .select()
+          .eq('service_request_id', serviceRequestId)
+          .eq('technician_id', technicianId)
+          .maybeSingle();
+
+      if (response == null) {
+        print('✅ No hay cotización');
+        return null;
+      }
+
+      print('✅ Cotización encontrada: ${response['id']}');
+      print('   Estado: ${response['status']}');
+
+      return QuotationModel.fromJson(response);
+    } catch (e) {
+      print('❌ [QUOTATIONS_DS] Error: $e');
+      return null;
+    }
+  }
+
+  /// Obtener todas las cotizaciones por técnico
+  Future<List<QuotationModel>> getQuotationsByTechnicianId(String technicianId) async {
+    try {
+      print('🔵 [QUOTATIONS_DS] Obteniendo cotizaciones del técnico: $technicianId');
+
+      final response = await _supabase
+          .from('quotations')
+          .select()
+          .eq('technician_id', technicianId)
+          .order('created_at', ascending: false);
+
+      final quotations = (response as List)
+          .map((json) => QuotationModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+
+      print('✅ [QUOTATIONS_DS] ${quotations.length} cotizaciones encontradas');
+
+      return quotations;
+    } catch (e, stackTrace) {
+      print('❌ [QUOTATIONS_DS] Error:');
+      print('   Error: $e');
+      print('   StackTrace: $stackTrace');
+      throw Exception('Error al obtener cotizaciones: $e');
     }
   }
 }

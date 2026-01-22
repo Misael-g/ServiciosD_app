@@ -7,10 +7,14 @@ class QuotationModel extends Quotation {
     required super.serviceRequestId,
     required super.technicianId,
     required super.estimatedPrice,
+    super.laborCost,           // ← NUEVO
+    super.materialsCost,       // ← NUEVO
     required super.estimatedDuration,
+    super.estimatedArrivalTime, // ← NUEVO
     required super.description,
     required super.status,
     required super.createdAt,
+    super.acceptedAt,
   });
 
   /// Crear QuotationModel desde JSON (Supabase)
@@ -20,10 +24,20 @@ class QuotationModel extends Quotation {
       serviceRequestId: json['service_request_id'] as String,
       technicianId: json['technician_id'] as String,
       estimatedPrice: (json['estimated_price'] as num).toDouble(),
+      laborCost: json['labor_cost'] != null           // ← NUEVO
+          ? (json['labor_cost'] as num).toDouble()
+          : null,
+      materialsCost: json['materials_cost'] != null   // ← NUEVO
+          ? (json['materials_cost'] as num).toDouble()
+          : null,
       estimatedDuration: json['estimated_duration'] as int,
+      estimatedArrivalTime: json['estimated_arrival_time'] as int?, // ← NUEVO
       description: json['description'] as String,
       status: json['status'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
+      acceptedAt: json['accepted_at'] != null
+          ? DateTime.parse(json['accepted_at'] as String)
+          : null,
     );
   }
 
@@ -34,10 +48,14 @@ class QuotationModel extends Quotation {
       'service_request_id': serviceRequestId,
       'technician_id': technicianId,
       'estimated_price': estimatedPrice,
+      'labor_cost': laborCost,              // ← NUEVO
+      'materials_cost': materialsCost,      // ← NUEVO
       'estimated_duration': estimatedDuration,
+      'estimated_arrival_time': estimatedArrivalTime, // ← NUEVO
       'description': description,
       'status': status,
       'created_at': createdAt.toIso8601String(),
+      'accepted_at': acceptedAt?.toIso8601String(),
     };
   }
 
@@ -62,10 +80,14 @@ class QuotationModel extends Quotation {
       serviceRequestId: quotation.serviceRequestId,
       technicianId: quotation.technicianId,
       estimatedPrice: quotation.estimatedPrice,
+      laborCost: quotation.laborCost,        // ← NUEVO
+      materialsCost: quotation.materialsCost, // ← NUEVO
       estimatedDuration: quotation.estimatedDuration,
+      estimatedArrivalTime: quotation.estimatedArrivalTime, // ← NUEVO
       description: quotation.description,
       status: quotation.status,
       createdAt: quotation.createdAt,
+      acceptedAt: quotation.acceptedAt,
     );
   }
 }

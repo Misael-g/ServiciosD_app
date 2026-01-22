@@ -9,7 +9,7 @@ import '../../core/utils/location_helper.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/constants/service_states.dart';
 import '../../core/config/supabase_config.dart';
-import '../client/request_detail_page.dart';
+import './request_detail_page.dart';
 
 /// Pantalla de solicitudes disponibles con mapa para el técnico
 class AvailableRequestsPage extends StatefulWidget {
@@ -326,7 +326,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => RequestDetailPage(requestId: request.id),
+                              builder: (_) => TechnicianRequestDetailPage(requestId: request.id),
                             ),
                           );
                         },
@@ -433,7 +433,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => RequestDetailPage(requestId: request.id),
+              builder: (_) => TechnicianRequestDetailPage(requestId: request.id),
             ),
           );
         },

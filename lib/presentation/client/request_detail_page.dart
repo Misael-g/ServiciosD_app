@@ -4,11 +4,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../data/datasources/service_requests_remote_ds.dart';
 import '../../data/datasources/quotations_remote_ds.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
+import '../../data/datasources/reviews_remote_ds.dart';
 import '../../data/models/service_request_model.dart';
 import '../../data/models/quotation_model.dart';
 import '../../data/models/profile_model.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/constants/service_states.dart';
+import 'leave_review_page.dart';
 
 /// Pantalla de detalle completo de solicitud (Cliente)
 class RequestDetailPage extends StatefulWidget {
@@ -29,6 +31,7 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
   final QuotationsRemoteDataSource _quotationsDS =
       QuotationsRemoteDataSource();
   final ProfilesRemoteDataSource _profilesDS = ProfilesRemoteDataSource();
+  final ReviewsRemoteDataSource _reviewsDS = ReviewsRemoteDataSource();
 
   ServiceRequestModel? _request;
   List<QuotationModel> _quotations = [];
@@ -147,7 +150,61 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
                   const SizedBox(height: 24),
                   if (_assignedTechnician != null) ...[
                     _buildTechnicianCard(),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
+                    // Botón Dejar Reseña si está completado
+                    if (_request?.status == 'completed') ...[
+                      FutureBuilder<bool>(
+                        future: _reviewsDS.hasReviewForRequest(widget.requestId),
+                        builder: (context, snapshot) {
+                          final hasReview = snapshot.data ?? false;
+
+                          if (hasReview) {
+                            return Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.green),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.check_circle, color: Colors.green),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    '¡Gracias por tu reseña!',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => LeaveReviewPage(
+                                    serviceRequest: _request!,
+                                    technician: _assignedTechnician!,
+                                  ),
+                                ),
+                              ).then((_) => _loadData());
+                            },
+                            icon: const Icon(Icons.star),
+                            label: const Text('Dejar Reseña'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                            ),
+                          );
+                        },
+                      ),
+                    ] else
+                      const SizedBox(height: 24),
                   ],
                   if (_quotations.isNotEmpty) ...[
                     _buildQuotationsSection(),
