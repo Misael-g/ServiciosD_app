@@ -26,7 +26,7 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
   Map<String, ServiceRequestModel> _requests = {};
   Map<String, ProfileModel> _clients = {};
   bool _isLoading = true;
-  String _filterStatus = 'all'; // all, pending, accepted, rejected
+  String _filterStatus = 'all';
 
   @override
   void initState() {
@@ -46,23 +46,19 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
 
       print('🔵 [MY_QUOTATIONS] Cargando cotizaciones del técnico: $technicianId');
 
-      // Cargar cotizaciones del técnico
       final quotations = await _quotationsDS.getQuotationsByTechnician(technicianId);
 
       print('✅ [MY_QUOTATIONS] ${quotations.length} cotizaciones encontradas');
 
-      // Cargar solicitudes y clientes
       final requests = <String, ServiceRequestModel>{};
       final clients = <String, ProfileModel>{};
 
       for (var quotation in quotations) {
-        // Cargar solicitud
         if (!requests.containsKey(quotation.serviceRequestId)) {
           try {
             final request = await _requestsDS.getServiceRequestById(quotation.serviceRequestId);
             requests[quotation.serviceRequestId] = request;
 
-            // Cargar cliente
             if (!clients.containsKey(request.clientId)) {
               final client = await _profilesDS.getProfileById(request.clientId);
               clients[request.clientId] = client;
@@ -118,7 +114,6 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
     try {
       print('📤 [MY_QUOTATIONS] Completando trabajo: ${request.id}');
 
-      // Usar la función RPC para completar el servicio
       await _requestsDS.completeService(request.id);
 
       print('✅ [MY_QUOTATIONS] Trabajo marcado como completado');
@@ -128,7 +123,7 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
           context,
           '¡Trabajo completado! El cliente puede dejar una reseña',
         );
-        _loadMyQuotations(); // Recargar
+        _loadMyQuotations();
       }
     } catch (e) {
       print('❌ [MY_QUOTATIONS] Error al completar: $e');
@@ -266,7 +261,7 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
     final isRejected = quotation.status == 'rejected';
     final isCompleted = request.status == 'completed' || request.status == 'rated';
     
-    // ✅ CORREGIDO: El técnico puede completar si:
+    // ✅ LÓGICA CORRECTA: El técnico puede completar si:
     // 1. La cotización fue aceptada
     // 2. El servicio está en 'quotation_accepted' o 'in_progress'
     // 3. No está ya completado
@@ -485,7 +480,7 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
                   ),
                 ],
 
-                // Botón de acción - COMPLETAR TRABAJO
+                // ✅ BOTÓN DE COMPLETAR - Solo si puede completar
                 if (canComplete) ...[
                   const SizedBox(height: 16),
                   SizedBox(
@@ -503,7 +498,7 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
                   ),
                 ],
 
-                // Mensaje si está completado
+                // Mensajes de estado
                 if (isCompleted) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -528,7 +523,6 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
                   ),
                 ],
 
-                // Mensaje si está rechazada
                 if (isRejected) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -556,7 +550,6 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
                   ),
                 ],
 
-                // Mensaje si está pendiente
                 if (isPending) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -581,7 +574,6 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
                   ),
                 ],
 
-                // Mensaje si está aceptada pero no completada
                 if (isAccepted && !isCompleted) ...[
                   const SizedBox(height: 12),
                   Container(

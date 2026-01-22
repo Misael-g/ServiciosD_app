@@ -124,6 +124,8 @@ class ServiceRequestsRemoteDataSource {
     int radiusMeters = 10000,
   }) async {
     try {
+      final technicianId = SupabaseConfig.currentUserId;
+      
       final response = await _supabase.rpc(
         'get_nearby_service_requests',
         params: {
@@ -165,6 +167,8 @@ class ServiceRequestsRemoteDataSource {
     int radiusMeters = 10000,
   }) async {
     try {
+      final technicianId = SupabaseConfig.currentUserId;
+      
       print('📍 [SERVICE_REQUESTS_DS] Buscando solicitudes cercanas');
       print('   Ubicación técnico: lat=$latitude, lon=$longitude');
       print('   Radio: ${radiusMeters}m');
@@ -175,6 +179,7 @@ class ServiceRequestsRemoteDataSource {
           'get_all_nearby_requests',
           params: {
             'tech_location': 'POINT($longitude $latitude)',
+            'tech_id': technicianId,  // ✅ Agregado
             'radius_meters': radiusMeters,
           },
         );
