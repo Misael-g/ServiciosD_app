@@ -28,7 +28,6 @@ class _TechnicianEditProfilePageState
   final _fullNameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _bioController = TextEditingController();
-  final _baseRateController = TextEditingController();
 
   final ProfilesRemoteDataSource _profilesDS = ProfilesRemoteDataSource();
   final StorageRemoteDataSource _storageDS = StorageRemoteDataSource();
@@ -76,8 +75,6 @@ class _TechnicianEditProfilePageState
     _fullNameController.text = widget.profile.fullName;
     _phoneController.text = widget.profile.phone ?? '';
     _bioController.text = widget.profile.bio ?? '';
-    _baseRateController.text =
-        widget.profile.baseRate?.toStringAsFixed(0) ?? '';
     _profilePictureUrl = widget.profile.profilePictureUrl;
     _selectedSpecialties = widget.profile.specialties ?? [];
     _selectedZones = widget.profile.coverageZones ?? [];
@@ -88,7 +85,6 @@ class _TechnicianEditProfilePageState
     _fullNameController.dispose();
     _phoneController.dispose();
     _bioController.dispose();
-    _baseRateController.dispose();
     super.dispose();
   }
 
@@ -172,7 +168,6 @@ class _TechnicianEditProfilePageState
         'full_name': _fullNameController.text.trim(),
         'phone': _phoneController.text.trim(),
         'bio': _bioController.text.trim(),
-        'base_rate': double.parse(_baseRateController.text),
         'specialties': _selectedSpecialties,
         'coverage_zones': _selectedZones,
         'profile_picture_url': imageUrl,
@@ -481,20 +476,6 @@ class _TechnicianEditProfilePageState
                             .toList(),
                       ),
               ),
-            ),
-            const SizedBox(height: 16),
-
-            // Tarifa base
-            TextFormField(
-              controller: _baseRateController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Tarifa Base por Hora',
-                prefixText: '\$ ',
-                prefixIcon: Icon(Icons.attach_money),
-              ),
-              validator: Validators.validatePrice,
-              enabled: !_isLoading,
             ),
             const SizedBox(height: 16),
 
