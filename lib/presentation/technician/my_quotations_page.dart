@@ -118,7 +118,8 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
     try {
       print('📤 [MY_QUOTATIONS] Completando trabajo: ${request.id}');
 
-      await _requestsDS.updateServiceRequestStatus(request.id, 'completed');
+      // Usar la función RPC para completar el servicio
+      await _requestsDS.completeService(request.id);
 
       print('✅ [MY_QUOTATIONS] Trabajo marcado como completado');
 
@@ -263,8 +264,15 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
     final isPending = quotation.status == 'pending';
     final isAccepted = quotation.status == 'accepted';
     final isRejected = quotation.status == 'rejected';
-    final isCompleted = request.status == 'completed';
-    final canComplete = isAccepted && !isCompleted && request.status == 'in_progress';
+    final isCompleted = request.status == 'completed' || request.status == 'rated';
+    
+    // ✅ CORREGIDO: El técnico puede completar si:
+    // 1. La cotización fue aceptada
+    // 2. El servicio está en 'quotation_accepted' o 'in_progress'
+    // 3. No está ya completado
+    final canComplete = isAccepted && 
+                       (request.status == 'quotation_accepted' || request.status == 'in_progress') &&
+                       !isCompleted;
 
     Color statusColor = Colors.grey;
     IconData statusIcon = Icons.hourglass_empty;
@@ -275,19 +283,19 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
       statusIcon = Icons.hourglass_empty;
       statusText = 'Pendiente';
     } else if (isAccepted) {
-      statusColor = Colors.green;
-      statusIcon = Icons.check_circle;
-      statusText = 'Aceptada';
+      if (isCompleted) {
+        statusColor = Colors.blue;
+        statusIcon = Icons.done_all;
+        statusText = 'Completada';
+      } else {
+        statusColor = Colors.green;
+        statusIcon = Icons.check_circle;
+        statusText = 'Aceptada';
+      }
     } else if (isRejected) {
       statusColor = Colors.red;
       statusIcon = Icons.cancel;
       statusText = 'Rechazada';
-    }
-
-    if (isCompleted) {
-      statusColor = Colors.blue;
-      statusIcon = Icons.done_all;
-      statusText = 'Completada';
     }
 
     return Card(
@@ -466,10 +474,10 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
                 ),
 
                 // Descripción
-                if (quotation.description != null && quotation.description!.isNotEmpty) ...[
+                if (quotation.description.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Text(
-                    quotation.description!,
+                    quotation.description,
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[700],
@@ -477,7 +485,7 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
                   ),
                 ],
 
-                // Botón de acción
+                // Botón de acción - COMPLETAR TRABAJO
                 if (canComplete) ...[
                   const SizedBox(height: 16),
                   SizedBox(
@@ -566,6 +574,33 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
                           child: Text(
                             'Esperando respuesta del cliente',
                             style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Mensaje si está aceptada pero no completada
+                if (isAccepted && !isCompleted) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            request.status == 'in_progress'
+                                ? 'Trabajo en progreso. Márcalo como completado cuando termines.'
+                                : '¡Cotización aceptada! Dirígete al lugar y comienza el trabajo.',
+                            style: const TextStyle(fontSize: 12),
                           ),
                         ),
                       ],
