@@ -1,0 +1,13 @@
+{
+  "name": "login-pro-vercel",
+  "version": "1.0.0",
+  "description": "Vercel pages for email verification and password reset",
+  "scripts": {
+    "generate-env": "node scripts/generate-env.js",
+    "deploy": "npm run generate-env && vercel --prod"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "dotenv": "^16.0.0"
+  }
+}

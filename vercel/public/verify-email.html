@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuenta Confirmada - TecniHogar</title>
+    <style>
+        :root {
+            --primary: #ff6b35;
+            --primary-dark: #e85a2a;
+            --secondary: #004e89;
+            --secondary-dark: #003d6b;
+            --accent: #ffc107;
+            --success: #00c853;
+            --gray-50: #fafafa;
+            --gray-100: #f5f5f5;
+            --gray-200: #eeeeee;
+            --gray-600: #757575;
+            --gray-700: #616161;
+            --gray-800: #424242;
+            --gray-900: #212121;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--secondary) 0%, #1a5f8a 50%, var(--secondary-dark) 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            line-height: 1.6;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                repeating-linear-gradient(
+                    45deg,
+                    transparent,
+                    transparent 10px,
+                    rgba(255, 255, 255, 0.02) 10px,
+                    rgba(255, 255, 255, 0.02) 20px
+                );
+            pointer-events: none;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--success) 0%, #00a344 100%);
+            padding: 48px 32px 32px;
+            text-align: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .logo {
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border: 4px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            margin: 0 auto 24px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1;
+            animation: checkAnimation 0.6s ease-out;
+        }
+
+        @keyframes checkAnimation {
+            0% {
+                transform: scale(0) rotate(-180deg);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.15) rotate(0deg);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            font-size: 15px;
+            opacity: 0.95;
+            max-width: 450px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+            line-height: 1.6;
+        }
+
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .content {
+            padding: 40px 32px;
+        }
+
+        .success-card {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 2px solid var(--success);
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 32px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 200, 83, 0.15);
+        }
+
+        .success-card h2 {
+            color: #1b5e20;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .success-card p {
+            color: #2e7d32;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .countdown-box {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 24px;
+            border: 2px solid var(--gray-200);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .countdown-box p {
+            color: var(--gray-700);
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .countdown {
+            display: inline-block;
+            font-weight: 700;
+            color: white;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            font-size: 48px;
+            width: 80px;
+            height: 80px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 18px 24px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .features {
+            margin-top: 32px;
+            background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
+            border-radius: 16px;
+            padding: 28px;
+            border: 2px solid var(--gray-200);
+        }
+
+        .features-title {
+            color: var(--gray-900);
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .features-title::before,
+        .features-title::after {
+            content: '';
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            flex: 1;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .feature-item {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid var(--gray-200);
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .feature-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary);
+        }
+
+        .feature-icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .feature-label {
+            color: var(--gray-800);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            opacity: 0.7;
+        }
+
+        .feature-text {
+            color: var(--gray-700);
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .info-banner {
+            margin-top: 24px;
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border-radius: 12px;
+            border: 2px solid var(--accent);
+        }
+
+        .info-banner-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .info-banner p {
+            color: #e65100;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.5;
+        }
+
+        .user-type-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 20px;
+            padding: 16px;
+            background: var(--gray-50);
+            border-radius: 12px;
+            border: 2px dashed var(--gray-300);
+        }
+
+        .user-type {
+            padding: 16px;
+            background: white;
+            border: 2px solid var(--gray-300);
+            border-radius: 10px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .user-type:hover {
+            border-color: var(--primary);
+            transform: scale(1.02);
+        }
+
+        .user-type-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .user-type-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                border-radius: 0;
+            }
+
+            .header {
+                padding: 32px 20px 24px;
+            }
+
+            .content {
+                padding: 24px 20px 32px;
+            }
+
+            h1 {
+                font-size: 26px;
+            }
+
+            .feature-grid,
+            .user-type-selector {
+                grid-template-columns: 1fr;
+            }
+
+            .countdown {
+                width: 70px;
+                height: 70px;
+                font-size: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">✓</div>
+            <h1>¡Cuenta Verificada!</h1>
+            <p class="subtitle">Tu correo electrónico ha sido confirmado exitosamente. Ahora tienes acceso completo a la plataforma de servicios técnicos.</p>
+            <div class="brand-badge">
+                ⚡ TecniHogar Pro
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="countdown-box">
+                <p>Redirigiendo a la aplicación en</p>
+                <div class="countdown" id="countdown">5</div>
+                <p style="margin-top: 12px; font-size: 12px; color: var(--gray-600);">segundos</p>
+            </div>
+
+            <a href="loginpro://verified" class="btn">🚀 Abrir Aplicación Ahora</a>
+
+            <div class="user-type-selector">
+                <div class="user-type">
+                    <div class="user-type-icon">👨‍🔧</div>
+                    <div class="user-type-title">SOY TÉCNICO</div>
+                </div>
+                <div class="user-type">
+                    <div class="user-type-icon">🏠</div>
+                    <div class="user-type-title">SOY CLIENTE</div>
+                </div>
+            </div>
+
+
+
+            <div class="info-banner">
+                <div class="info-banner-icon">💡</div>
+                <p><strong>Consejo:</strong> Completa tu perfil con foto y especialidades para mejorar tu visibilidad y confianza en la plataforma</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let countdown = 5;
+        const countdownElement = document.getElementById('countdown');
+        const deepLink = 'loginpro://verified';
+
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            countdownElement.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(countdownInterval);
+                redirectToApp();
+            }
+        }, 1000);
+
+        function redirectToApp() {
+            window.location.href = deepLink;
+            
+            setTimeout(() => {
+                console.log('App móvil no detectada, usuario permanece en la página web');
+                showFallbackMessage();
+            }, 2000);
+        }
+
+        function showFallbackMessage() {
+            const countdownBox = document.querySelector('.countdown-box');
+            if (countdownBox) {
+                countdownBox.innerHTML = `
+                    <div style="padding: 20px;">
+                        <p style="color: var(--gray-800); font-weight: 600; margin-bottom: 12px;">
+                            ⚠️ ¿No se abrió la aplicación?
+                        </p>
+                        <p style="font-size: 13px; color: var(--gray-600);">
+                            Asegúrate de tener la aplicación TecniHogar instalada en tu dispositivo
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        document.querySelector('.btn').addEventListener('click', (e) => {
+            clearInterval(countdownInterval);
+        });
+    </script>
+</body>
+</html>
