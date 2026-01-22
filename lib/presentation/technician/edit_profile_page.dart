@@ -37,7 +37,7 @@ class _TechnicianEditProfilePageState
   String? _profilePictureUrl;
   bool _isLoading = false;
 
-  // Especialidades y zonas
+  // Especialidades
   final List<String> _availableSpecialties = [
     'Electricista',
     'Plomero',
@@ -53,17 +53,7 @@ class _TechnicianEditProfilePageState
     'Otros',
   ];
 
-  final List<String> _availableZones = [
-    'Norte',
-    'Sur',
-    'Centro',
-    'Este',
-    'Oeste',
-    'Todo el área metropolitana',
-  ];
-
   List<String> _selectedSpecialties = [];
-  List<String> _selectedZones = [];
 
   @override
   void initState() {
@@ -77,7 +67,6 @@ class _TechnicianEditProfilePageState
     _bioController.text = widget.profile.bio ?? '';
     _profilePictureUrl = widget.profile.profilePictureUrl;
     _selectedSpecialties = widget.profile.specialties ?? [];
-    _selectedZones = widget.profile.coverageZones ?? [];
   }
 
   @override
@@ -137,14 +126,6 @@ class _TechnicianEditProfilePageState
       return;
     }
 
-    if (_selectedZones.isEmpty) {
-      SnackbarHelper.showError(
-        context,
-        'Debes seleccionar al menos una zona de cobertura',
-      );
-      return;
-    }
-
     setState(() => _isLoading = true);
 
     try {
@@ -169,7 +150,6 @@ class _TechnicianEditProfilePageState
         'phone': _phoneController.text.trim(),
         'bio': _bioController.text.trim(),
         'specialties': _selectedSpecialties,
-        'coverage_zones': _selectedZones,
         'profile_picture_url': imageUrl,
       };
 
@@ -297,59 +277,6 @@ class _TechnicianEditProfilePageState
                 ],
               );
             },
-          );
-        },
-      ),
-    );
-  }
-
-  void _showZonesSelector() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Zonas de cobertura',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Listo'),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              ...(_availableZones.map((zone) {
-                final isSelected = _selectedZones.contains(zone);
-                return CheckboxListTile(
-                  title: Text(zone),
-                  value: isSelected,
-                  onChanged: (bool? value) {
-                    setModalState(() {
-                      if (value == true) {
-                        _selectedZones.add(zone);
-                      } else {
-                        _selectedZones.remove(zone);
-                      }
-                    });
-                    setState(() {});
-                  },
-                );
-              })),
-              const SizedBox(height: 16),
-            ],
           );
         },
       ),
@@ -499,35 +426,6 @@ class _TechnicianEditProfilePageState
                 return null;
               },
               enabled: !_isLoading,
-            ),
-            const SizedBox(height: 16),
-
-            // Zonas
-            InkWell(
-              onTap: _isLoading ? null : _showZonesSelector,
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Zonas de Cobertura',
-                  prefixIcon: Icon(Icons.map_outlined),
-                  suffixIcon: Icon(Icons.arrow_drop_down),
-                ),
-                child: _selectedZones.isEmpty
-                    ? const Text(
-                        'Selecciona zonas donde ofreces servicio',
-                        style: TextStyle(color: Colors.grey),
-                      )
-                    : Wrap(
-                        spacing: 4,
-                        runSpacing: 4,
-                        children: _selectedZones
-                            .map((z) => Chip(
-                                  label: Text(z,
-                                      style: const TextStyle(fontSize: 12)),
-                                  visualDensity: VisualDensity.compact,
-                                ))
-                            .toList(),
-                      ),
-              ),
             ),
             const SizedBox(height: 24),
 
