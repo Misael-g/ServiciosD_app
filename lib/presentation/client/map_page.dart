@@ -191,14 +191,22 @@ class _ClientMapPageState extends State<ClientMapPage> {
               ),
               const SizedBox(height: 8),
             ],
-            if (technician.baseRate != null)
+            if (technician.bio != null && technician.bio!.isNotEmpty) ...[
               Row(
                 children: [
-                  const Icon(Icons.attach_money, size: 20),
+                  const Icon(Icons.info_outline, size: 20),
                   const SizedBox(width: 8),
-                  Text('Tarifa base: \$${technician.baseRate!.toStringAsFixed(0)}/hora'),
+                  Expanded(
+                    child: Text(
+                      technician.bio!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                  ),
                 ],
               ),
+            ],
           ],
         ),
       ),
