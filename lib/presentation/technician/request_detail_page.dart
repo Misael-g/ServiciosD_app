@@ -13,7 +13,7 @@ import '../../core/config/supabase_config.dart';
 import 'send_quotation_page.dart';
 
 /// Pantalla de detalle de solicitud para técnico
-/// Muestra toda la información de la solicitud antes de cotizar
+/// ✅ ACTUALIZADA: Botón para completar trabajo cuando cotización aceptada
 class TechnicianRequestDetailPage extends StatefulWidget {
   final String requestId;
 
@@ -38,9 +38,9 @@ class _TechnicianRequestDetailPageState
   ServiceRequestModel? _request;
   ProfileModel? _clientProfile;
   ProfileModel? _technicianProfile;
-  QuotationModel? _myQuotation;     // ← NUEVO
+  QuotationModel? _myQuotation;
   bool _isLoading = true;
-  bool _hasQuotation = false;       // ← NUEVO
+  bool _hasQuotation = false;
   double? _distanceKm;
 
   @override
@@ -61,6 +61,7 @@ class _TechnicianRequestDetailPageState
       print('✅ [REQUEST_DETAIL] Solicitud cargada');
       print('   Título: ${request.title}');
       print('   Cliente ID: ${request.clientId}');
+      print('   Estado: ${request.status}');
       print('   Ubicación: lat=${request.latitude}, lng=${request.longitude}');
 
       // 2. Verificar si ya envié cotización
@@ -69,7 +70,7 @@ class _TechnicianRequestDetailPageState
 
       if (hasQuotation) {
         print('⚠️ [REQUEST_DETAIL] Ya existe cotización');
-        print('   Estado: ${myQuotation!.status}');
+        print('   Estado cotización: ${myQuotation!.status}');
       } else {
         print('✅ [REQUEST_DETAIL] No hay cotización previa');
       }
@@ -107,8 +108,8 @@ class _TechnicianRequestDetailPageState
         _request = request;
         _clientProfile = clientProfile;
         _technicianProfile = techProfile;
-        _myQuotation = myQuotation;       // ← NUEVO
-        _hasQuotation = hasQuotation;     // ← NUEVO
+        _myQuotation = myQuotation;
+        _hasQuotation = hasQuotation;
         _isLoading = false;
       });
     } catch (e) {
@@ -136,6 +137,134 @@ class _TechnicianRequestDetailPageState
         Navigator.pop(context, true);
       }
     });
+  }
+
+  /// ✅ NUEVA FUNCIÓN: Completar trabajo
+  Future<void> _completeWork() async {
+    if (_request == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 28),
+            SizedBox(width: 12),
+            Text('Completar Trabajo'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '¿Confirmas que has completado este trabajo?',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Al marcar como completado:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('• El cliente será notificado'),
+                  const Text('• Podrá verificar el trabajo'),
+                  const Text('• Podrá dejar una reseña'),
+                  const Text('• Se incrementarán tus trabajos completados'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.attach_money, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Precio acordado: \$${_myQuotation?.estimatedPrice.toStringAsFixed(2) ?? "0.00"}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.check),
+            label: const Text('Sí, Completar'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      print('📤 [REQUEST_DETAIL] Completando trabajo: ${_request!.id}');
+
+      // ✅ Usar la función RPC que ya existe en Supabase
+      await _requestsDS.completeService(_request!.id);
+
+      print('✅ [REQUEST_DETAIL] Trabajo marcado como completado');
+
+      if (mounted) {
+        SnackbarHelper.showSuccess(
+          context,
+          '¡Trabajo completado! El cliente puede dejar una reseña',
+        );
+        
+        // Recargar datos para actualizar UI
+        await _loadData();
+      }
+    } catch (e) {
+      print('❌ [REQUEST_DETAIL] Error al completar: $e');
+      if (mounted) {
+        SnackbarHelper.showError(
+          context,
+          'Error al completar trabajo: ${e.toString().replaceAll("Exception: ", "")}',
+        );
+      }
+    }
   }
 
   @override
@@ -499,6 +628,15 @@ class _TechnicianRequestDetailPageState
   }
 
   Widget _buildActionButton() {
+    // ✅ Verificar si puede completar el trabajo
+    final canComplete = _hasQuotation && 
+                       _myQuotation?.status == 'accepted' && 
+                       (_request!.status == 'quotation_accepted' || _request!.status == 'in_progress') &&
+                       _request!.status != 'completed' &&
+                       _request!.status != 'rated';
+
+    final isCompleted = _request!.status == 'completed' || _request!.status == 'rated';
+
     // Si ya envió cotización
     if (_hasQuotation && _myQuotation != null) {
       return Container(
@@ -564,19 +702,73 @@ class _TechnicianRequestDetailPageState
                 ),
               ),
 
-              // Botón para ver mis cotizaciones
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.pop(context); // Volver
-                  // Navegar a MyQuotationsPage
-                },
-                icon: const Icon(Icons.receipt_long),
-                label: const Text('Ver Mis Cotizaciones'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+              // ✅ BOTÓN DE COMPLETAR - Solo si puede completar
+              if (canComplete) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _completeWork,
+                    icon: const Icon(Icons.check_circle, size: 28),
+                    label: const Text(
+                      'Marcar como Completado',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 3,
+                    ),
+                  ),
                 ),
-              ),
+              ],
+
+              // Mensaje si ya está completado
+              if (isCompleted) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.done_all, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '✅ Trabajo completado. Esperando reseña del cliente.',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // Botón para ver mis cotizaciones
+              if (!isCompleted) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context); // Volver
+                  },
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('Volver'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -640,9 +832,13 @@ class _TechnicianRequestDetailPageState
   }
 
   String _getQuotationStatusText() {
+    if (_request!.status == 'completed' || _request!.status == 'rated') {
+      return '✅ Trabajo Completado';
+    }
+    
     switch (_myQuotation?.status) {
       case 'accepted':
-        return '¡Cotización Aceptada!';
+        return '🎉 ¡Cotización Aceptada!';
       case 'rejected':
         return 'Cotización Rechazada';
       default:
