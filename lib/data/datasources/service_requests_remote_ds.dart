@@ -410,4 +410,69 @@ class ServiceRequestsRemoteDataSource {
   double _toRadians(double degrees) {
     return degrees * math.pi / 180;
   }
+
+  /// Cancelar/Eliminar solicitud (Cliente)
+  Future<void> cancelServiceRequest(String requestId) async {
+    try {
+      final clientId = SupabaseConfig.currentUserId;
+      if (clientId == null) {
+        throw Exception('No hay cliente autenticado');
+      }
+
+      print('📤 [SERVICE_REQUESTS_DS] Cancelando solicitud: $requestId');
+
+      // 1️⃣ Obtener solicitud actual
+      final current = await _supabase
+          .from('service_requests')
+          .select('status')
+          .eq('id', requestId)
+          .eq('client_id', clientId)
+          .single();
+
+      final currentStatus = current['status'] as String;
+
+      // 2️⃣ Validar que puede cancelar
+      if (currentStatus != 'pending' && currentStatus != 'quotation_sent') {
+        throw Exception(
+          'Solo puedes cancelar solicitudes pendientes'
+        );
+      }
+
+      // 3️⃣ Cancelar
+      await _supabase
+          .from('service_requests')
+          .update({'status': 'cancelled'})
+          .eq('id', requestId)
+          .eq('client_id', clientId);
+
+      print('✅ [SERVICE_REQUESTS_DS] Solicitud cancelada');
+
+    } catch (e) {
+      print('❌ [SERVICE_REQUESTS_DS] Error: $e');
+      throw Exception('Error al cancelar: $e');
+    }
+  }
+
+  /// Actualizar imágenes de una solicitud
+  Future<void> updateServiceRequestImages(
+    String requestId,
+    List<String> imageUrls,
+  ) async {
+    try {
+      print('📤 [SERVICE_REQUESTS_DS] Actualizando imágenes de solicitud: $requestId');
+      print('   URLs: $imageUrls');
+
+      await _supabase
+          .from('service_requests')
+          .update({'images': imageUrls})
+          .eq('id', requestId);
+
+      print('✅ [SERVICE_REQUESTS_DS] Imágenes actualizadas');
+    } catch (e, stackTrace) {
+      print('❌ [SERVICE_REQUESTS_DS] Error al actualizar imágenes:');
+      print('   Error: $e');
+      print('   StackTrace: $stackTrace');
+      throw Exception('Error al actualizar imágenes: $e');
+    }
+  }
 }

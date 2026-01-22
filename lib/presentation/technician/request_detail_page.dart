@@ -294,9 +294,10 @@ class _TechnicianRequestDetailPageState
 
                           // Galería de fotos
                           if (_request!.images != null &&
-                              _request!.images!.isNotEmpty)
+                              _request!.images!.isNotEmpty) ...[
                             _buildPhotosSection(),
-                          const SizedBox(height: 16),
+                            const SizedBox(height: 24),
+                          ],
 
                           // Mapa con ubicación
                           _buildMapSection(),
@@ -456,56 +457,129 @@ class _TechnicianRequestDetailPageState
   }
 
   Widget _buildPhotosSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    if (_request!.images == null || _request!.images!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Encabezado
+        const Row(
           children: [
-            const Text(
-              'Fotos',
+            Icon(Icons.photo_library, size: 20),
+            SizedBox(width: 8),
+            Text(
+              'Fotos del Problema',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 120,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _request!.images!.length,
-                itemBuilder: (context, index) {
-                  final imageUrl = _request!.images![index];
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
-                      onTap: () => _showFullImage(imageUrl),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          imageUrl,
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: 120,
-                              height: 120,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.error),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
           ],
         ),
-      ),
+        
+        const SizedBox(height: 12),
+        
+        // Scroll horizontal de fotos
+        SizedBox(
+          height: 120,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _request!.images!.length,
+            itemBuilder: (context, index) {
+              final imageUrl = _request!.images![index];
+              
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap: () {
+                    // Ver imagen en grande
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => Scaffold(
+                          backgroundColor: Colors.black,
+                          appBar: AppBar(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            title: Text('Foto ${index + 1} de ${_request!.images!.length}'),
+                          ),
+                          body: Center(
+                            child: InteractiveViewer(
+                              minScale: 0.5,
+                              maxScale: 4.0,
+                              child: Image.network(
+                                imageUrl,
+                                fit: BoxFit.contain,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const Center(
+                                    child: CircularProgressIndicator(color: Colors.white),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.broken_image, color: Colors.white, size: 64),
+                                        SizedBox(height: 16),
+                                        Text('Error al cargar imagen', style: TextStyle(color: Colors.white)),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 120,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Image.network(
+                        imageUrl,
+                        width: 120,
+                        height: 120,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey.shade200,
+                            child: const Icon(
+                              Icons.broken_image,
+                              color: Colors.grey,
+                              size: 40,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -844,34 +918,6 @@ class _TechnicianRequestDetailPageState
       default:
         return 'Cotización Enviada - Pendiente';
     }
-  }
-
-  void _showFullImage(String imageUrl) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppBar(
-              title: const Text('Imagen'),
-              leading: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-            Expanded(
-              child: InteractiveViewer(
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   String _formatDate(DateTime date) {

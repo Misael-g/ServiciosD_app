@@ -194,22 +194,40 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       );
 
       // Subir imágenes si hay
-      List<String>? imageUrls;
       if (_selectedImages.isNotEmpty) {
-        SnackbarHelper.showLoading(context, 'Subiendo imágenes...');
-        
-        imageUrls = [];
-        for (final image in _selectedImages) {
-          final url = await _storageDataSource.uploadServiceImage(
-            serviceRequestId: request.id,
-            file: image,
-          );
-          imageUrls.add(url);
-        }
+        try {
+          print('📤 [CREATE_REQUEST] Subiendo ${_selectedImages.length} imágenes...');
+          
+          final imageUrls = <String>[];
+          
+          for (int i = 0; i < _selectedImages.length; i++) {
+            final image = _selectedImages[i];
+            
+            print('   Subiendo imagen ${i + 1}/${_selectedImages.length}...');
+            
+            final url = await _storageDataSource.uploadServiceImage(
+              serviceRequestId: request.id,
+              file: image,
+            );
+            
+            imageUrls.add(url);
+            print('   ✅ Imagen ${i + 1} subida: $url');
+          }
 
-        // Actualizar la solicitud con las URLs de las imágenes
-        // Esto requeriría un método update en el datasource
-        // Por ahora, las imágenes se subirán pero no se asociarán automáticamente
+          // ✅ ACTUALIZAR LA SOLICITUD CON LAS URLs
+          print('📤 [CREATE_REQUEST] Actualizando solicitud con URLs de imágenes...');
+          
+          await _serviceRequestsDataSource.updateServiceRequestImages(
+            request.id,
+            imageUrls,
+          );
+          
+          print('✅ [CREATE_REQUEST] Imágenes guardadas en BD: ${imageUrls.length}');
+          
+        } catch (e) {
+          print('❌ [CREATE_REQUEST] Error al subir imágenes: $e');
+          // Continuar aunque falle subir imágenes
+        }
       }
 
       if (mounted) {

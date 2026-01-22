@@ -46,6 +46,53 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     }
   }
 
+  Future<void> _showCancelDialog(ServiceRequestModel request) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar Solicitud'),
+        content: Text(
+          '¿Cancelar "${request.title}"?\n\n'
+          'Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Sí, cancelar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await _dataSource.cancelServiceRequest(request.id);
+      
+      if (mounted) {
+        SnackbarHelper.showSuccess(
+          context,
+          'Solicitud cancelada',
+        );
+        _loadRequests(); // Recargar lista
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(
+          context,
+          'Error al cancelar',
+        );
+      }
+    }
+  }
+
   List<ServiceRequestModel> get _filteredRequests {
     switch (_selectedFilter) {
       case 'active':
@@ -151,6 +198,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
                     child: Text(
@@ -180,6 +228,30 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                       ),
                     ),
                   ),
+                  if (request.status == 'pending' || 
+                      request.status == 'quotation_sent')
+                    PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'cancel') {
+                          _showCancelDialog(request);
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'cancel',
+                          child: Row(
+                            children: [
+                              Icon(Icons.cancel, color: Colors.red, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Cancelar Solicitud',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
               const SizedBox(height: 8),

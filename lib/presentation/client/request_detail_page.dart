@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../data/datasources/service_requests_remote_ds.dart';
 import '../../data/datasources/quotations_remote_ds.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
@@ -131,6 +130,62 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
     }
   }
 
+  Future<void> _cancelRequest() async {
+    if (_request!.status != 'pending' && 
+        _request!.status != 'quotation_sent') {
+      SnackbarHelper.showError(
+        context,
+        'Solo puedes cancelar solicitudes pendientes',
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar Solicitud'),
+        content: const Text(
+          '¿Estás seguro que deseas cancelar esta solicitud?\n\n'
+          'Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No, mantener'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Sí, cancelar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await _requestsDS.cancelServiceRequest(widget.requestId);
+      
+      if (mounted) {
+        SnackbarHelper.showSuccess(
+          context,
+          'Solicitud cancelada exitosamente',
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(
+          context,
+          'Error al cancelar solicitud',
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -206,7 +261,21 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
                     ] else
                       const SizedBox(height: 24),
                   ],
+                  // Solo si puede cancelar
+                  if (_request!.status == 'pending' || 
+                      _request!.status == 'quotation_sent') ...[const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: _cancelRequest,
+                      icon: const Icon(Icons.cancel),
+                      label: const Text('Cancelar Solicitud'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                      ),
+                    ),
+                  ],
                   if (_quotations.isNotEmpty) ...[
+                    const SizedBox(height: 24),
                     _buildQuotationsSection(),
                   ],
                   if (_request?.images != null && _request!.images!.isNotEmpty) ...[
@@ -503,45 +572,143 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
   }
 
   Widget _buildImagesSection() {
+    if (_request!.images == null || _request!.images!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Imágenes del Problema',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        // Encabezado
+        Row(
+          children: [
+            const Icon(Icons.photo_library, size: 20, color: Colors.blue),
+            const SizedBox(width: 8),
+            const Text(
+              'Mis Fotos',
+              style: TextStyle(
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
-        ),
-        const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-          ),
-          itemCount: _request!.images!.length,
-          itemBuilder: (context, index) {
-            final imageUrl = _request!.images![index];
-            return ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: CachedNetworkImage(
-                imageUrl: imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[200],
-                  child: const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.error),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${_request!.images!.length}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue.shade900,
                 ),
               ),
-            );
-          },
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Scroll horizontal de fotos
+        SizedBox(
+          height: 120,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _request!.images!.length,
+            itemBuilder: (context, index) {
+              final imageUrl = _request!.images![index];
+              
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap: () {
+                    // Ver imagen en grande
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => Scaffold(
+                          backgroundColor: Colors.black,
+                          appBar: AppBar(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            title: Text('Foto ${index + 1} de ${_request!.images!.length}'),
+                          ),
+                          body: Center(
+                            child: InteractiveViewer(
+                              minScale: 0.5,
+                              maxScale: 4.0,
+                              child: Image.network(
+                                imageUrl,
+                                fit: BoxFit.contain,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const Center(
+                                    child: CircularProgressIndicator(color: Colors.white),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.broken_image, color: Colors.white, size: 64),
+                                        SizedBox(height: 16),
+                                        Text('Error al cargar imagen', style: TextStyle(color: Colors.white)),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 120,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.blue.shade200, width: 2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Image.network(
+                        imageUrl,
+                        width: 120,
+                        height: 120,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey.shade200,
+                            child: const Icon(
+                              Icons.broken_image,
+                              color: Colors.grey,
+                              size: 40,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ],
     );
