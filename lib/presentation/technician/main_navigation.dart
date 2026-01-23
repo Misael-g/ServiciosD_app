@@ -108,7 +108,7 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation>
       _NavItem(
         icon: Icons.work_outline_rounded,
         activeIcon: Icons.work_rounded,
-        label: 'Solicitudes',
+        label: 'Trabajos',
         color: AppColors.success,
       ),
       _NavItem(
@@ -140,6 +140,11 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation>
 
   @override
   Widget build(BuildContext context) {
+    // Detectar tamaño de pantalla
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    final isVerySmall = screenWidth < 320;
+
     if (_isLoading) {
       return Scaffold(
         backgroundColor: AppColors.background,
@@ -194,7 +199,7 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation>
           color: AppColors.white,
           boxShadow: [
             BoxShadow(
-              color: AppColors.black.withValues(alpha: 0.08),
+              color: AppColors.black.withOpacity(0.08),
               blurRadius: 20,
               offset: const Offset(0, -5),
             ),
@@ -202,13 +207,16 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation>
         ),
         child: SafeArea(
           child: Container(
-            height: 70,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            height: isVerySmall ? 62 : (isSmallScreen ? 65 : 70),
+            padding: EdgeInsets.symmetric(
+              horizontal: isVerySmall ? 2 : (isSmallScreen ? 4 : 8),
+              vertical: isVerySmall ? 6 : 8,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: List.generate(
                 _navItems.length,
-                (index) => _buildNavItem(index),
+                (index) => _buildNavItem(index, isSmallScreen, isVerySmall),
               ),
             ),
           ),
@@ -217,7 +225,7 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation>
     );
   }
 
-  Widget _buildNavItem(int index) {
+  Widget _buildNavItem(int index, bool isSmallScreen, bool isVerySmall) {
     final item = _navItems[index];
     final isActive = _currentIndex == index;
 
@@ -227,17 +235,20 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation>
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          padding: EdgeInsets.symmetric(
+            horizontal: isVerySmall ? 1 : (isSmallScreen ? 2 : 6),
+            vertical: isVerySmall ? 4 : 6,
+          ),
           decoration: BoxDecoration(
             gradient: isActive
                 ? LinearGradient(
                     colors: [
-                      item.color.withValues(alpha: 0.15),
-                      item.color.withValues(alpha: 0.05),
+                      item.color.withOpacity(0.15),
+                      item.color.withOpacity(0.05),
                     ],
                   )
                 : null,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -245,7 +256,7 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation>
             children: [
               // Ícono animado
               ScaleTransition(
-                scale: Tween<double>(begin: 1.0, end: 1.2).animate(
+                scale: Tween<double>(begin: 1.0, end: 1.15).animate(
                   CurvedAnimation(
                     parent: _iconAnimations[index],
                     curve: Curves.easeInOut,
@@ -254,39 +265,40 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation>
                 child: Icon(
                   isActive ? item.activeIcon : item.icon,
                   color: isActive ? item.color : AppColors.textSecondary,
-                  size: 24,
+                  size: isVerySmall ? 20 : (isSmallScreen ? 22 : 24),
                 ),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: isVerySmall ? 2 : (isSmallScreen ? 2 : 3)),
 
-              // Label con límite de líneas
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 300),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: isActive ? 11 : 10,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  color: isActive ? item.color : AppColors.textSecondary,
-                  letterSpacing: 0.2,
-                ),
-                child: Text(
-                  item.label,
+              // Label responsive - Más pequeño y compacto
+              Flexible(
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 300),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.clip,
+                  style: TextStyle(
+                    fontSize: isVerySmall ? 9 : (isSmallScreen ? 10 : 11),
+                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                    color: isActive ? item.color : AppColors.textSecondary,
+                    letterSpacing: isVerySmall ? 0 : 0.1,
+                    height: 1.1,
+                  ),
+                  child: Text(
+                    item.label,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
 
               // Indicador de activo
-              const SizedBox(height: 2),
+              SizedBox(height: isVerySmall ? 2 : 3),
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                width: isActive ? 16 : 0,
-                height: 2,
+                width: isActive ? (isVerySmall ? 12 : (isSmallScreen ? 14 : 16)) : 0,
+                height: 2.5,
                 decoration: BoxDecoration(
                   color: item.color,
-                  borderRadius: BorderRadius.circular(1),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ],
@@ -302,7 +314,7 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation>
       child: SafeArea(
         child: Column(
           children: [
-            // Header
+            // Header mejorado
             Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
@@ -320,7 +332,7 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation>
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: AppColors.white.withValues(alpha: 0.2),
+                      color: AppColors.white.withOpacity(0.2),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -424,7 +436,7 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 24),

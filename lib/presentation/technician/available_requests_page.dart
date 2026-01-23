@@ -4,16 +4,15 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../data/datasources/service_requests_remote_ds.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
-import '../../data/datasources/quotations_remote_ds.dart';
+import '../../data/datasources/quotations_remote_ds.dart'; // 🆕
 import '../../data/models/service_request_model.dart';
 import '../../core/utils/location_helper.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/constants/service_states.dart';
 import '../../core/config/supabase_config.dart';
-import '../../core/theme/app_theme.dart';
-import '../../core/widgets/custom_widgets.dart';
 import './request_detail_page.dart';
 
+/// Pantalla de solicitudes disponibles con mapa para el técnico
 class AvailableRequestsPage extends StatefulWidget {
   const AvailableRequestsPage({super.key});
 
@@ -21,52 +20,48 @@ class AvailableRequestsPage extends StatefulWidget {
   State<AvailableRequestsPage> createState() => _AvailableRequestsPageState();
 }
 
-class _AvailableRequestsPageState extends State<AvailableRequestsPage> 
-    with SingleTickerProviderStateMixin {
+class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
   final ServiceRequestsRemoteDataSource _serviceRequestsDS =
       ServiceRequestsRemoteDataSource();
   final ProfilesRemoteDataSource _profilesDS = ProfilesRemoteDataSource();
-  final QuotationsRemoteDataSource _quotationsDS = QuotationsRemoteDataSource();
+  final QuotationsRemoteDataSource _quotationsDS = QuotationsRemoteDataSource(); // 🆕
   final MapController _mapController = MapController();
 
   List<ServiceRequestModel> _requests = [];
   Position? _currentPosition;
   bool _isLoading = true;
   bool _isUpdatingLocation = false;
-  bool _showMap = true;
-  final Map<String, bool> _myQuotationsCache = {};
-  late AnimationController _animationController;
+  bool _showMap = true; // Toggle entre mapa y lista
+  final Map<String, bool> _myQuotationsCache = {}; // 🆕 Cache de cotizaciones propias
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
     _loadDataAndUpdateLocation();
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
+  /// Carga datos Y actualiza ubicación GPS del técnico
   Future<void> _loadDataAndUpdateLocation() async {
     setState(() => _isLoading = true);
 
     try {
+      // 1. Obtener ubicación GPS actual
       final position = await LocationHelper.getCurrentLocation();
 
       if (position != null) {
         setState(() => _currentPosition = position);
+
+        // 2. Actualizar ubicación en el perfil del técnico
         await _updateTechnicianLocation(position);
+
+        // 3. Cargar solicitudes cercanas
         await _loadNearbyRequests(position);
-        _animationController.forward();
       } else {
         if (mounted) {
-          SnackbarHelper.showError(context, 'No se pudo obtener tu ubicación');
+          SnackbarHelper.showError(
+            context,
+            'No se pudo obtener tu ubicación',
+          );
         }
       }
     } catch (e) {
@@ -80,6 +75,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
     }
   }
 
+  /// Actualiza la ubicación GPS en el perfil del técnico
   Future<void> _updateTechnicianLocation(Position position) async {
     setState(() => _isUpdatingLocation = true);
 
@@ -87,14 +83,27 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
       final userId = SupabaseConfig.currentUserId;
       if (userId == null) return;
 
+      // Obtener dirección desde coordenadas
+      String? address;
+      try {
+        // Aquí podrías usar geocoding si lo necesitas
+        // final placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+        address = 'Ubicación actualizada'; // Placeholder
+      } catch (e) {
+        address = null;
+      }
+
       await _profilesDS.updateLocation(
         userId,
         latitude: position.latitude,
         longitude: position.longitude,
-        address: 'Ubicación actualizada',
+        address: address,
       );
+
+      print('✅ Ubicación del técnico actualizada');
     } catch (e) {
       print('⚠️ Error al actualizar ubicación: $e');
+      // No mostrar error al usuario, es silencioso
     } finally {
       if (mounted) {
         setState(() => _isUpdatingLocation = false);
@@ -102,14 +111,16 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
     }
   }
 
+  /// Carga solicitudes cercanas
   Future<void> _loadNearbyRequests(Position position) async {
     try {
       final requests = await _serviceRequestsDS.getAllNearbyRequests(
         latitude: position.latitude,
         longitude: position.longitude,
-        radiusMeters: 10000,
+        radiusMeters: 10000, // 10km
       );
 
+      // 🆕 Verificar mis cotizaciones
       _myQuotationsCache.clear();
       for (var request in requests) {
         final myQuotation = await _quotationsDS.getMyQuotationForRequest(request.id);
@@ -127,218 +138,59 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // AppBar Expandible Moderno
-          SliverAppBar(
-            expandedHeight: 160,
-            floating: false,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.success,
-                      AppColors.success.withValues(alpha: 0.8),
-                    ],
-                  ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(
-                              Icons.work_outline_rounded,
-                              size: 32,
-                              color: AppColors.white,
-                            ),
-                            SizedBox(width: 12),
-                            Text(
-                              'Solicitudes Disponibles',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.white,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        if (_currentPosition != null)
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.location_on_rounded,
-                                      size: 16,
-                                      color: AppColors.white,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${_requests.length} cerca de ti',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: AppColors.white,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            actions: [
-              // Toggle Vista
-              Container(
-                margin: const EdgeInsets.only(right: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: IconButton(
-                  icon: Icon(
-                    _showMap ? Icons.list_rounded : Icons.map_rounded,
-                    color: AppColors.white,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _showMap = !_showMap;
-                    });
-                  },
-                  tooltip: _showMap ? 'Ver Lista' : 'Ver Mapa',
-                ),
-              ),
-              // Actualizar Ubicación
-              Container(
-                margin: const EdgeInsets.only(right: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: IconButton(
-                  icon: _isUpdatingLocation
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              AppColors.white,
-                            ),
-                          ),
-                        )
-                      : const Icon(
-                          Icons.my_location_rounded,
-                          color: AppColors.white,
-                        ),
-                  onPressed: _isUpdatingLocation ? null : _loadDataAndUpdateLocation,
-                  tooltip: 'Actualizar ubicación',
-                ),
-              ),
-            ],
+      appBar: AppBar(
+        title: const Text('Solicitudes Disponibles'),
+        actions: [
+          // Toggle mapa/lista
+          IconButton(
+            icon: Icon(_showMap ? Icons.list : Icons.map),
+            onPressed: () {
+              setState(() {
+                _showMap = !_showMap;
+              });
+            },
+            tooltip: _showMap ? 'Ver Lista' : 'Ver Mapa',
           ),
-
-          // Contenido
-          SliverToBoxAdapter(
-            child: _isLoading
+          // Actualizar ubicación
+          IconButton(
+            icon: _isUpdatingLocation
                 ? const SizedBox(
-                    height: 400,
-                    child: Center(child: CircularProgressIndicator()),
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
                   )
-                : _currentPosition == null
-                    ? _buildNoLocationWidget()
-                    : FadeTransition(
-                        opacity: _animationController,
-                        child: _showMap ? _buildMapView() : _buildListView(),
-                      ),
+                : const Icon(Icons.my_location),
+            onPressed: _isUpdatingLocation ? null : _loadDataAndUpdateLocation,
+            tooltip: 'Actualizar ubicación',
           ),
         ],
       ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _currentPosition == null
+              ? _buildNoLocationWidget()
+              : _showMap
+                  ? _buildMapView()
+                  : _buildListView(),
     );
   }
 
   Widget _buildNoLocationWidget() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: AppShadows.medium,
-      ),
+    return Center(
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.error.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.location_off_rounded,
-              size: 64,
-              color: AppColors.error,
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'No se pudo obtener tu ubicación',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Verifica que tengas los permisos de ubicación activados y el GPS encendido',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _loadDataAndUpdateLocation,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Reintentar'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-            ),
+          const Icon(Icons.location_off, size: 64, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text('No se pudo obtener tu ubicación'),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _loadDataAndUpdateLocation,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Reintentar'),
           ),
         ],
       ),
@@ -348,67 +200,38 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
   Widget _buildMapView() {
     return Column(
       children: [
-        // Panel de Info Superior
+        // Info panel superior
         Container(
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.white,
-                AppColors.background,
-              ],
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.border),
-            boxShadow: AppShadows.medium,
-          ),
+          padding: const EdgeInsets.all(16),
+          color: Colors.blue[50],
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildInfoChip(
-                Icons.work_outline_rounded,
+                Icons.work_outline,
                 '${_requests.length}',
                 'Solicitudes',
-                AppColors.success,
-              ),
-              Container(
-                width: 1,
-                height: 40,
-                color: AppColors.border,
+                Colors.blue,
               ),
               _buildInfoChip(
-                Icons.location_on_rounded,
+                Icons.location_on,
                 '10 km',
                 'Radio',
-                AppColors.warning,
+                Colors.orange,
               ),
-              if (_isUpdatingLocation) ...[
-                Container(
-                  width: 1,
-                  height: 40,
-                  color: AppColors.border,
-                ),
+              if (_isUpdatingLocation)
                 _buildInfoChip(
-                  Icons.gps_fixed_rounded,
+                  Icons.gps_fixed,
                   'GPS',
-                  'Actualizando',
-                  AppColors.info,
+                  'Actualizando...',
+                  Colors.green,
                 ),
-              ],
             ],
           ),
         ),
 
         // Mapa
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          height: 500,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: AppShadows.large,
-          ),
-          clipBehavior: Clip.antiAlias,
+        Expanded(
           child: FlutterMap(
             mapController: _mapController,
             options: MapOptions(
@@ -421,10 +244,13 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
               maxZoom: 18,
             ),
             children: [
+              // Capa de tiles (OpenStreetMap)
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.example.servicios_app',
               ),
+
+              // Círculo de radio de 10km
               CircleLayer(
                 circles: [
                   CircleMarker(
@@ -432,83 +258,68 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
                       _currentPosition!.latitude,
                       _currentPosition!.longitude,
                     ),
-                    radius: 10000,
+                    radius: 10000, // 10km en metros
                     useRadiusInMeter: true,
-                    color: AppColors.success.withValues(alpha: 0.1),
-                    borderColor: AppColors.success,
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderColor: Colors.blue,
                     borderStrokeWidth: 2,
                   ),
                 ],
               ),
+
+              // Marcadores
               MarkerLayer(
                 markers: [
-                  // Tu ubicación
+                  // Marcador de ubicación del técnico
                   Marker(
                     point: LatLng(
                       _currentPosition!.latitude,
                       _currentPosition!.longitude,
                     ),
-                    width: 100,
-                    height: 100,
+                    width: 80,
+                    height: 80,
                     child: Column(
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
+                            horizontal: 8,
+                            vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                AppColors.success,
-                                AppColors.success.withValues(alpha: 0.8),
-                              ],
-                            ),
+                            color: Colors.green,
                             borderRadius: BorderRadius.circular(12),
-                            boxShadow: AppShadows.medium,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: const Text(
-                            'Tú',
+                            'Tu ubicación',
                             style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: AppColors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: AppShadows.medium,
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppColors.success,
-                                  AppColors.success.withValues(alpha: 0.8),
-                                ],
-                              ),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.person_pin_circle_rounded,
-                              color: AppColors.white,
-                              size: 24,
-                            ),
-                          ),
+                        const Icon(
+                          Icons.person_pin_circle,
+                          color: Colors.green,
+                          size: 40,
                         ),
                       ],
                     ),
                   ),
-                  // Solicitudes
-                  ..._requests
-                      .where((r) => r.latitude != 0.0 && r.longitude != 0.0)
-                      .map((request) {
+
+                  // Marcadores de solicitudes
+                  ..._requests.where((request) {
+                    // 🔍 DEBUG: Imprimir coordenadas para verificar
+                    print('📍 Request ${request.id}: lat=${request.latitude}, lng=${request.longitude}');
+                    return request.latitude != 0.0 && request.longitude != 0.0;
+                  }).map((request) {
                     final distance = LocationHelper.calculateDistance(
                       _currentPosition!.latitude,
                       _currentPosition!.longitude,
@@ -518,16 +329,14 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
 
                     return Marker(
                       point: LatLng(request.latitude!, request.longitude!),
-                      width: 140,
-                      height: 140,
+                      width: 120,
+                      height: 120,
                       child: GestureDetector(
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => TechnicianRequestDetailPage(
-                                requestId: request.id,
-                              ),
+                              builder: (_) => TechnicianRequestDetailPage(requestId: request.id),
                             ),
                           );
                         },
@@ -535,17 +344,19 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
+                                horizontal: 8,
+                                vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.white,
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: AppColors.primary,
-                                  width: 2,
-                                ),
-                                boxShadow: AppShadows.medium,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -553,39 +364,25 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
                                   Text(
                                     request.serviceType,
                                     style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.primary,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                     textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(height: 2),
                                   Text(
                                     LocationHelper.formatDistance(distance),
                                     style: TextStyle(
-                                      fontSize: 10,
-                                      color: AppColors.textSecondary,
-                                      fontWeight: FontWeight.w600,
+                                      fontSize: 9,
+                                      color: Colors.grey[600],
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: BoxDecoration(
-                                color: AppColors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: AppShadows.small,
-                              ),
-                              child: const Icon(
-                                Icons.location_on_rounded,
-                                color: AppColors.primary,
-                                size: 36,
-                              ),
+                            const Icon(
+                              Icons.location_on,
+                              color: Colors.red,
+                              size: 40,
                             ),
                           ],
                         ),
@@ -597,27 +394,32 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
             ],
           ),
         ),
-        const SizedBox(height: 100),
       ],
     );
   }
 
   Widget _buildListView() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
+    return RefreshIndicator(
+      onRefresh: _loadDataAndUpdateLocation,
       child: _requests.isEmpty
-          ? EmptyState(
-              icon: Icons.search_off_rounded,
-              title: 'No hay solicitudes cercanas',
-              message: 'Revisa más tarde o amplía tu radio de búsqueda',
-              action: ElevatedButton.icon(
-                onPressed: _loadDataAndUpdateLocation,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Actualizar'),
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No hay solicitudes cercanas',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                  ),
+                ],
               ),
             )
-          : Column(
-              children: _requests.map((request) {
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _requests.length,
+              itemBuilder: (context, index) {
+                final request = _requests[index];
                 final distance = _currentPosition != null
                     ? LocationHelper.calculateDistance(
                         _currentPosition!.latitude,
@@ -627,136 +429,63 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
                       )
                     : null;
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildRequestCard(request, distance),
-                );
-              }).toList(),
+                return _buildRequestCard(request, distance);
+              },
             ),
     );
   }
 
   Widget _buildRequestCard(ServiceRequestModel request, double? distance) {
-    final iSentQuotation = _myQuotationsCache[request.id] ?? false;
-    final statusColor = iSentQuotation
-        ? AppColors.success
-        : Color(ServiceStates.getStateColor(request.status));
-
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => TechnicianRequestDetailPage(requestId: request.id),
-          ),
-        );
-      },
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: iSentQuotation 
-                ? AppColors.success.withValues(alpha: 0.3)
-                : AppColors.border,
-            width: iSentQuotation ? 2 : 1,
-          ),
-          boxShadow: AppShadows.small,
-        ),
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.08),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-              ),
-              child: Row(
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TechnicianRequestDetailPage(requestId: request.id),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _getServiceIcon(request.serviceType),
-                      color: statusColor,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          request.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
-                            color: AppColors.textPrimary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            request.serviceType,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      request.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                   if (distance != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
+                        horizontal: 8,
+                        vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.info,
-                            AppColors.info.withValues(alpha: 0.8),
-                          ],
-                        ),
+                        color: Colors.blue[50],
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.location_on_rounded,
-                            size: 16,
-                            color: AppColors.white,
-                          ),
+                          Icon(Icons.location_on,
+                              size: 14, color: Colors.blue[700]),
                           const SizedBox(width: 4),
                           Text(
                             LocationHelper.formatDistance(distance),
-                            style: const TextStyle(
-                              color: AppColors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
+                            style: TextStyle(
+                              color: Colors.blue[700],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -764,70 +493,47 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
                     ),
                 ],
               ),
-            ),
-
-            // Contenido
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 8),
+              Text(
+                request.description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 12),
+              Row(
                 children: [
+                  Icon(Icons.work_outline, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
                   Text(
-                    request.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                      height: 1.4,
-                    ),
+                    request.serviceType,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: LocationBadge(location: request.address),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Color(ServiceStates.getStateColor(request.status))
+                          .withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _getDisplayStatusForTechnician(request), // 🆕
+                      style: TextStyle(
+                        color:
+                            Color(ServiceStates.getStateColor(request.status)),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
-                      if (iSentQuotation)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.success.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: AppColors.success,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.check_circle_rounded,
-                                size: 16,
-                                color: AppColors.success,
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                'Cotización Enviada',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.success,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -842,69 +548,43 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        const SizedBox(height: 8),
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 4),
         Text(
           value,
           style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
             color: color,
-            letterSpacing: -0.5,
           ),
         ),
-        const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
-            color: AppColors.textSecondary,
-            fontWeight: FontWeight.w500,
+            color: Colors.grey[700],
           ),
         ),
       ],
     );
   }
 
-  IconData _getServiceIcon(String serviceType) {
-    switch (serviceType) {
-      case 'Electricista':
-        return Icons.electrical_services_rounded;
-      case 'Plomero':
-        return Icons.plumbing_rounded;
-      case 'Carpintero':
-        return Icons.carpenter_rounded;
-      case 'Pintor':
-        return Icons.format_paint_rounded;
-      case 'Mecánico':
-        return Icons.build_circle_rounded;
-      case 'Jardinero':
-        return Icons.grass_rounded;
-      case 'Limpieza':
-        return Icons.cleaning_services_rounded;
-      default:
-        return Icons.handyman_rounded;
-    }
-  }
-
+  /// 🆕 Obtener estado apropiado para mostrar al técnico
+  /// Verifica si YO envié cotización
   String _getDisplayStatusForTechnician(ServiceRequestModel request) {
+    // Si YO envié cotización
     final iSentQuotation = _myQuotationsCache[request.id] ?? false;
     
     if (iSentQuotation) {
       return '📤 Cotización Enviada';
     }
     
+    // Si otros enviaron pero yo no
     if (request.status == 'quotation_sent') {
       return '🟢 Disponible';
     }
     
+    // Otros estados
     return ServiceStates.getDisplayName(request.status);
   }
 }

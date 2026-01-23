@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../data/datasources/service_requests_remote_ds.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
 import '../../data/datasources/quotations_remote_ds.dart';
@@ -10,10 +11,10 @@ import '../../data/models/profile_model.dart';
 import '../../data/models/quotation_model.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/config/supabase_config.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/custom_widgets.dart';
 import 'send_quotation_page.dart';
 
-/// Pantalla de detalle de solicitud para técnico
-/// ✅ ACTUALIZADA: Botón para completar trabajo cuando cotización aceptada
 class TechnicianRequestDetailPage extends StatefulWidget {
   final String requestId;
 
@@ -28,12 +29,10 @@ class TechnicianRequestDetailPage extends StatefulWidget {
 }
 
 class _TechnicianRequestDetailPageState
-    extends State<TechnicianRequestDetailPage> {
-  final ServiceRequestsRemoteDataSource _requestsDS =
-      ServiceRequestsRemoteDataSource();
+    extends State<TechnicianRequestDetailPage> with SingleTickerProviderStateMixin {
+  final ServiceRequestsRemoteDataSource _requestsDS = ServiceRequestsRemoteDataSource();
   final ProfilesRemoteDataSource _profilesDS = ProfilesRemoteDataSource();
-  final QuotationsRemoteDataSource _quotationsDS =
-      QuotationsRemoteDataSource();
+  final QuotationsRemoteDataSource _quotationsDS = QuotationsRemoteDataSource();
 
   ServiceRequestModel? _request;
   ProfileModel? _clientProfile;
@@ -42,53 +41,51 @@ class _TechnicianRequestDetailPageState
   bool _isLoading = true;
   bool _hasQuotation = false;
   double? _distanceKm;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
     try {
-      print('🔵 [REQUEST_DETAIL] Cargando solicitud: ${widget.requestId}');
-
-      // 1. Cargar solicitud
       final request = await _requestsDS.getServiceRequestById(widget.requestId);
-
-      print('✅ [REQUEST_DETAIL] Solicitud cargada');
-      print('   Título: ${request.title}');
-      print('   Cliente ID: ${request.clientId}');
-      print('   Estado: ${request.status}');
-      print('   Ubicación: lat=${request.latitude}, lng=${request.longitude}');
-
-      // 2. Verificar si ya envié cotización
       final myQuotation = await _quotationsDS.getMyQuotationForRequest(widget.requestId);
       final hasQuotation = myQuotation != null;
-
-      if (hasQuotation) {
-        print('⚠️ [REQUEST_DETAIL] Ya existe cotización');
-        print('   Estado cotización: ${myQuotation!.status}');
-      } else {
-        print('✅ [REQUEST_DETAIL] No hay cotización previa');
-      }
-
-      // 3. Cargar perfil del cliente
       final clientProfile = await _profilesDS.getProfileById(request.clientId);
 
-      print('✅ [REQUEST_DETAIL] Cliente cargado: ${clientProfile.fullName}');
-
-      // 4. Cargar perfil del técnico (para calcular distancia)
       final technicianId = SupabaseConfig.currentUserId;
       ProfileModel? techProfile;
       if (technicianId != null) {
         techProfile = await _profilesDS.getProfileById(technicianId);
-        print('✅ [REQUEST_DETAIL] Técnico cargado: ${techProfile.fullName}');
-        print('   Ubicación técnico: lat=${techProfile.latitude}, lng=${techProfile.longitude}');
 
-        // 5. Calcular distancia
         if (techProfile.latitude != null &&
             techProfile.longitude != null &&
             request.latitude != null &&
@@ -100,7 +97,6 @@ class _TechnicianRequestDetailPageState
             request.longitude!,
           );
           _distanceKm = distance / 1000;
-          print('📍 [REQUEST_DETAIL] Distancia calculada: ${_distanceKm!.toStringAsFixed(2)}km');
         }
       }
 
@@ -112,8 +108,9 @@ class _TechnicianRequestDetailPageState
         _hasQuotation = hasQuotation;
         _isLoading = false;
       });
+
+      _animationController.forward();
     } catch (e) {
-      print('❌ [REQUEST_DETAIL] Error: $e');
       if (mounted) {
         setState(() => _isLoading = false);
         SnackbarHelper.showError(context, 'Error al cargar solicitud');
@@ -133,24 +130,31 @@ class _TechnicianRequestDetailPageState
       ),
     ).then((sent) {
       if (sent == true && mounted) {
-        // Regresar a la pantalla anterior
         Navigator.pop(context, true);
       }
     });
   }
 
-  /// ✅ NUEVA FUNCIÓN: Completar trabajo
   Future<void> _completeWork() async {
     if (_request == null) return;
 
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
         title: const Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.green, size: 28),
+            Icon(Icons.check_circle_rounded, color: AppColors.success, size: 32),
             SizedBox(width: 12),
-            Text('Completar Trabajo'),
+            Text(
+              'Completar Trabajo',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -164,52 +168,68 @@ class _TechnicianRequestDetailPageState
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.info.withOpacity(0.1),
+                    AppColors.info.withOpacity(0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.info.withOpacity(0.3),
+                ),
               ),
-              child: Column(
+              child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                      const SizedBox(width: 8),
-                      const Text(
+                      Icon(Icons.info_outline_rounded, color: AppColors.info, size: 20),
+                      SizedBox(width: 8),
+                      Text(
                         'Al marcar como completado:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  const Text('• El cliente será notificado'),
-                  const Text('• Podrá verificar el trabajo'),
-                  const Text('• Podrá dejar una reseña'),
-                  const Text('• Se incrementarán tus trabajos completados'),
+                  SizedBox(height: 12),
+                  Text('• El cliente será notificado'),
+                  Text('• Podrá verificar el trabajo'),
+                  Text('• Podrá dejar una reseña'),
+                  Text('• Se incrementarán tus trabajos completados'),
                 ],
               ),
             ),
             const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(8),
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.success.withOpacity(0.15),
+                    AppColors.success.withOpacity(0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.attach_money, color: Colors.green),
-                  const SizedBox(width: 8),
+                  const Icon(Icons.payments_rounded, color: AppColors.success, size: 24),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Precio acordado: \$${_myQuotation?.estimatedPrice.toStringAsFixed(2) ?? "0.00"}',
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                        color: AppColors.success,
                       ),
                     ),
                   ),
@@ -225,12 +245,15 @@ class _TechnicianRequestDetailPageState
           ),
           ElevatedButton.icon(
             onPressed: () => Navigator.pop(context, true),
-            icon: const Icon(Icons.check),
+            icon: const Icon(Icons.check_rounded),
             label: const Text('Sí, Completar'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              backgroundColor: AppColors.success,
+              foregroundColor: AppColors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],
@@ -240,24 +263,16 @@ class _TechnicianRequestDetailPageState
     if (confirm != true) return;
 
     try {
-      print('📤 [REQUEST_DETAIL] Completando trabajo: ${_request!.id}');
-
-      // ✅ Usar la función RPC que ya existe en Supabase
       await _requestsDS.completeService(_request!.id);
-
-      print('✅ [REQUEST_DETAIL] Trabajo marcado como completado');
 
       if (mounted) {
         SnackbarHelper.showSuccess(
           context,
           '¡Trabajo completado! El cliente puede dejar una reseña',
         );
-        
-        // Recargar datos para actualizar UI
         await _loadData();
       }
     } catch (e) {
-      print('❌ [REQUEST_DETAIL] Error al completar: $e');
       if (mounted) {
         SnackbarHelper.showError(
           context,
@@ -270,107 +285,152 @@ class _TechnicianRequestDetailPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detalle de Solicitud'),
-        backgroundColor: Colors.orange,
-      ),
+      backgroundColor: AppColors.background,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _request == null
               ? const Center(child: Text('No se encontró la solicitud'))
-              : Column(
+              : CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    // AppBar con Hero Image
+                    _buildSliverAppBar(),
+
+                    // Contenido
+                    SliverToBoxAdapter(
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: SlideTransition(
+                          position: _slideAnimation,
+                          child: Column(
+                            children: [
+                              // Header con info principal
+                              _buildHeaderSection(),
+                              const SizedBox(height: 16),
+
+                              // Cliente Card
+                              _buildClientCard(),
+                              const SizedBox(height: 16),
+
+                              // Distancia Badge
+                              if (_distanceKm != null) _buildDistanceBadge(),
+                              if (_distanceKm != null) const SizedBox(height: 16),
+
+                              // Galería de fotos
+                              if (_request!.images != null && _request!.images!.isNotEmpty) ...[
+                                _buildPhotoGallery(),
+                                const SizedBox(height: 16),
+                              ],
+
+                              // Mapa
+                              _buildMapSection(),
+                              const SizedBox(height: 120),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+      // Botón de acción flotante
+      bottomNavigationBar: _isLoading ? null : _buildActionButton(),
+    );
+  }
+
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      expandedHeight: 200,
+      pinned: true,
+      stretch: true,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Gradient Background
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.success,
+                    AppColors.success.withOpacity(0.7),
+                  ],
+                ),
+              ),
+            ),
+            // Pattern overlay
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.1,
+                child: Image.asset(
+                  'assets/pattern.png',
+                  repeat: ImageRepeat.repeat,
+                  errorBuilder: (_, __, ___) => const SizedBox(),
+                ),
+              ),
+            ),
+            // Content
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.all(16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: AppColors.white.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Título y descripción
-                          _buildTitleSection(),
-                          const SizedBox(height: 16),
-
-                          // Info del cliente
-                          _buildClientSection(),
-                          const SizedBox(height: 16),
-
-                          // Galería de fotos
-                          if (_request!.images != null &&
-                              _request!.images!.isNotEmpty) ...[
-                            _buildPhotosSection(),
-                            const SizedBox(height: 24),
-                          ],
-
-                          // Mapa con ubicación
-                          _buildMapSection(),
-                          const SizedBox(height: 16),
-
-                          // Distancia
-                          if (_distanceKm != null) _buildDistanceSection(),
+                          Icon(
+                            _getServiceIcon(_request!.serviceType),
+                            color: AppColors.white,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _request!.serviceType,
+                            style: const TextStyle(
+                              color: AppColors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-
-                    // Botón de acción
-                    _buildActionButton(),
+                    const SizedBox(height: 12),
+                    Text(
+                      _request!.title,
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black26,
+                            blurRadius: 10,
+                          ),
+                        ],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
-    );
-  }
-
-  Widget _buildTitleSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade100,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _request!.serviceType,
-                    style: TextStyle(
-                      color: Colors.orange.shade900,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _request!.title,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _request!.description,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[700],
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 8),
-                Text(
-                  'Creado: ${_formatDate(_request!.createdAt)}',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-              ],
             ),
           ],
         ),
@@ -378,199 +438,459 @@ class _TechnicianRequestDetailPageState
     );
   }
 
-  Widget _buildClientSection() {
+  Widget _buildHeaderSection() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppShadows.medium,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Descripción
+          const Row(
+            children: [
+              Icon(Icons.description_rounded, color: AppColors.secondary, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Descripción',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _request!.description,
+            style: const TextStyle(
+              fontSize: 16,
+              color: AppColors.textPrimary,
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Divider(height: 1),
+          const SizedBox(height: 20),
+          // Fecha
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.info.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.calendar_today_rounded,
+                  color: AppColors.info,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Fecha de solicitud',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _formatDate(_request!.createdAt),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClientCard() {
     if (_clientProfile == null) return const SizedBox.shrink();
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Cliente',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.blue,
-                  backgroundImage: _clientProfile!.profilePictureUrl != null
-                      ? NetworkImage(_clientProfile!.profilePictureUrl!)
-                      : null,
-                  child: _clientProfile!.profilePictureUrl == null
-                      ? Text(
-                          _clientProfile!.fullName[0].toUpperCase(),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            color: Colors.white,
-                          ),
-                        )
-                      : null,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary.withOpacity(0.08),
+            AppColors.primary.withOpacity(0.02),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.2),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _clientProfile!.fullName,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                child: const Icon(
+                  Icons.person_rounded,
+                  color: AppColors.primary,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Cliente',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              // Avatar con border gradient
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary,
+                      AppColors.primary.withOpacity(0.6),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(3),
+                child: ProfileAvatar(
+                  name: _clientProfile!.fullName,
+                  imageUrl: _clientProfile!.profilePictureUrl,
+                  radius: 32,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _clientProfile!.fullName,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
                       ),
-                      if (_clientProfile!.phone != null) ...[
-                        const SizedBox(height: 4),
-                        Row(
+                    ),
+                    if (_clientProfile!.phone != null) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.phone, size: 16, color: Colors.grey[600]),
-                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.phone_rounded,
+                              size: 16,
+                              color: AppColors.success,
+                            ),
+                            const SizedBox(width: 6),
                             Text(
                               _clientProfile!.phone!,
-                              style: TextStyle(color: Colors.grey[600]),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.success,
+                              ),
                             ),
                           ],
                         ),
-                      ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              // Botón de llamar
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.success,
+                      AppColors.success.withOpacity(0.8),
                     ],
                   ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.success.withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.phone, color: Colors.green),
+                child: IconButton(
+                  icon: const Icon(Icons.phone_rounded),
+                  color: AppColors.white,
                   onPressed: () {
                     // TODO: Implementar llamada
+                    SnackbarHelper.showInfo(context, 'Función de llamada');
                   },
-                  tooltip: 'Llamar',
+                  iconSize: 24,
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildPhotosSection() {
-    if (_request!.images == null || _request!.images!.isEmpty) {
-      return const SizedBox.shrink();
-    }
+  Widget _buildDistanceBadge() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.warning.withOpacity(0.15),
+            AppColors.warning.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.warning.withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.warning,
+                  AppColors.warning.withOpacity(0.8),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.near_me_rounded,
+              color: AppColors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Distancia estimada',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${_distanceKm!.toStringAsFixed(2)} km',
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.warning,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 6,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.directions_car_rounded,
+                  size: 16,
+                  color: AppColors.warning,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '~${(_distanceKm! * 2).toInt()} min',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.warning,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildPhotoGallery() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Encabezado
-        const Row(
-          children: [
-            Icon(Icons.photo_library, size: 20),
-            SizedBox(width: 8),
-            Text(
-              'Fotos del Problema',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Icon(Icons.photo_library_rounded, color: AppColors.secondary, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Fotos del Problema',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.secondary,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        
-        const SizedBox(height: 12),
-        
-        // Scroll horizontal de fotos
+        const SizedBox(height: 16),
         SizedBox(
-          height: 120,
+          height: 200,
           child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
             itemCount: _request!.images!.length,
             itemBuilder: (context, index) {
               final imageUrl = _request!.images![index];
-              
               return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: GestureDetector(
-                  onTap: () {
-                    // Ver imagen en grande
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => Scaffold(
-                          backgroundColor: Colors.black,
-                          appBar: AppBar(
-                            backgroundColor: Colors.black,
-                            foregroundColor: Colors.white,
-                            title: Text('Foto ${index + 1} de ${_request!.images!.length}'),
-                          ),
-                          body: Center(
-                            child: InteractiveViewer(
-                              minScale: 0.5,
-                              maxScale: 4.0,
-                              child: Image.network(
-                                imageUrl,
-                                fit: BoxFit.contain,
-                                loadingBuilder: (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return const Center(
-                                    child: CircularProgressIndicator(color: Colors.white),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Center(
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.broken_image, color: Colors.white, size: 64),
-                                        SizedBox(height: 16),
-                                        Text('Error al cargar imagen', style: TextStyle(color: Colors.white)),
-                                      ],
-                                    ),
-                                  );
-                                },
+                padding: const EdgeInsets.only(right: 12),
+                child: Hero(
+                  tag: 'request_image_$index',
+                  child: GestureDetector(
+                    onTap: () => _viewImageFullscreen(imageUrl, index),
+                    child: Container(
+                      width: 160,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: AppShadows.medium,
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              color: AppColors.background,
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: AppColors.background,
+                              child: const Icon(
+                                Icons.broken_image_rounded,
+                                color: AppColors.error,
+                                size: 48,
                               ),
                             ),
                           ),
-                        ),
-                      ),
-                    );
-                  },
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: 120,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Image.network(
-                        imageUrl,
-                        width: 120,
-                        height: 120,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
+                          // Overlay gradient
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.4),
+                                ],
+                              ),
                             ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey.shade200,
-                            child: const Icon(
-                              Icons.broken_image,
-                              color: Colors.grey,
-                              size: 40,
+                          ),
+                          // Número de foto
+                          Positioned(
+                            bottom: 12,
+                            right: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.white.withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.image_rounded,
+                                    size: 14,
+                                    color: AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${index + 1}/${_request!.images!.length}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          );
-                        },
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -590,49 +910,77 @@ class _TechnicianRequestDetailPageState
 
     final requestLocation = LatLng(_request!.latitude!, _request!.longitude!);
     LatLng? technicianLocation;
-    if (_technicianProfile?.latitude != null &&
-        _technicianProfile?.longitude != null) {
+    if (_technicianProfile?.latitude != null && _technicianProfile?.longitude != null) {
       technicianLocation = LatLng(
         _technicianProfile!.latitude!,
         _technicianProfile!.longitude!,
       );
     }
 
-    return Card(
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppShadows.large,
+      ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
+          // Header del mapa
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.info,
+                  AppColors.info.withOpacity(0.8),
+                ],
+              ),
+            ),
             child: Row(
               children: [
-                const Text(
-                  'Ubicación',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.map_rounded,
+                    color: AppColors.white,
+                    size: 24,
                   ),
                 ),
-                const Spacer(),
-                if (_request!.address != null)
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      _request!.address!,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ubicación',
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      textAlign: TextAlign.right,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                      Text(
+                        'Ubicación exacta del servicio',
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
               ],
             ),
           ),
+          // Mapa
           SizedBox(
-            height: 250,
+            height: 300,
             child: FlutterMap(
               options: MapOptions(
                 initialCenter: requestLocation,
@@ -645,30 +993,122 @@ class _TechnicianRequestDetailPageState
                 ),
                 MarkerLayer(
                   markers: [
-                    // Marcador de la solicitud (rojo)
+                    // Marcador solicitud
                     Marker(
                       point: requestLocation,
-                      width: 40,
-                      height: 40,
-                      child: const Icon(
-                        Icons.location_on,
-                        color: Colors.red,
-                        size: 40,
+                      width: 80,
+                      height: 80,
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.error,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: AppShadows.small,
+                            ),
+                            child: const Text(
+                              'Cliente',
+                              style: TextStyle(
+                                color: AppColors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Icon(
+                            Icons.location_on_rounded,
+                            color: AppColors.error,
+                            size: 40,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black26,
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    // Marcador del técnico (azul)
+                    // Marcador técnico
                     if (technicianLocation != null)
                       Marker(
                         point: technicianLocation,
-                        width: 40,
-                        height: 40,
-                        child: const Icon(
-                          Icons.my_location,
-                          color: Colors.blue,
-                          size: 40,
+                        width: 80,
+                        height: 80,
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.success,
+                                    AppColors.success.withOpacity(0.8),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: AppShadows.small,
+                              ),
+                              child: const Text(
+                                'Tú',
+                                style: TextStyle(
+                                  color: AppColors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Icon(
+                              Icons.my_location_rounded,
+                              color: AppColors.success,
+                              size: 40,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black26,
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                   ],
+                ),
+              ],
+            ),
+          ),
+          // Dirección
+          Container(
+            padding: const EdgeInsets.all(20),
+            color: AppColors.white,
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.place_rounded,
+                  color: AppColors.textSecondary,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _request!.address ?? 'Dirección no disponible',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                      height: 1.4,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -678,49 +1118,25 @@ class _TechnicianRequestDetailPageState
     );
   }
 
-  Widget _buildDistanceSection() {
-    return Card(
-      color: Colors.blue.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(Icons.straighten, color: Colors.blue.shade700),
-            const SizedBox(width: 12),
-            Text(
-              'Distancia: ${_distanceKm!.toStringAsFixed(2)} km',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue.shade700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildActionButton() {
-    // ✅ Verificar si puede completar el trabajo
-    final canComplete = _hasQuotation && 
-                       _myQuotation?.status == 'accepted' && 
-                       (_request!.status == 'quotation_accepted' || _request!.status == 'in_progress') &&
-                       _request!.status != 'completed' &&
-                       _request!.status != 'rated';
+    final canComplete = _hasQuotation &&
+        _myQuotation?.status == 'accepted' &&
+        (_request!.status == 'quotation_accepted' || _request!.status == 'in_progress') &&
+        _request!.status != 'completed' &&
+        _request!.status != 'rated';
 
     final isCompleted = _request!.status == 'completed' || _request!.status == 'rated';
 
     // Si ya envió cotización
     if (_hasQuotation && _myQuotation != null) {
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
+              color: AppColors.black.withOpacity(0.1),
+              blurRadius: 20,
               offset: const Offset(0, -5),
             ),
           ],
@@ -729,26 +1145,49 @@ class _TechnicianRequestDetailPageState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Estado de la cotización
+              // Estado de cotización
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: _getQuotationStatusColor().withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [
+                      _getQuotationStatusColor().withOpacity(0.15),
+                      _getQuotationStatusColor().withOpacity(0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: _getQuotationStatusColor(),
+                    color: _getQuotationStatusColor().withOpacity(0.3),
                     width: 2,
                   ),
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      _getQuotationStatusIcon(),
-                      color: _getQuotationStatusColor(),
-                      size: 28,
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            _getQuotationStatusColor(),
+                            _getQuotationStatusColor().withOpacity(0.8),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _getQuotationStatusColor().withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        _getQuotationStatusIcon(),
+                        color: AppColors.white,
+                        size: 28,
+                      ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -756,17 +1195,18 @@ class _TechnicianRequestDetailPageState
                           Text(
                             _getQuotationStatusText(),
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
                               color: _getQuotationStatusColor(),
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Precio: \$${_myQuotation!.estimatedPrice.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[700],
+                            'Precio: \${_myQuotation!.estimatedPrice.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -776,71 +1216,48 @@ class _TechnicianRequestDetailPageState
                 ),
               ),
 
-              // ✅ BOTÓN DE COMPLETAR - Solo si puede completar
+              // Botón de completar
               if (canComplete) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
+                  height: 60,
+                  child: ElevatedButton(
                     onPressed: _completeWork,
-                    icon: const Icon(Icons.check_circle, size: 28),
-                    label: const Text(
-                      'Marcar como Completado',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: AppColors.success,
+                      foregroundColor: AppColors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      elevation: 3,
+                      elevation: 0,
+                      shadowColor: AppColors.success.withOpacity(0.3),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle_rounded, size: 28),
+                        SizedBox(width: 12),
+                        Text(
+                          'Marcar como Completado',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ],
 
-              // Mensaje si ya está completado
+              // Mensaje si completado
               if (isCompleted) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.done_all, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '✅ Trabajo completado. Esperando reseña del cliente.',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-
-              // Botón para ver mis cotizaciones
-              if (!isCompleted) ...[
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context); // Volver
-                  },
-                  icon: const Icon(Icons.arrow_back),
-                  label: const Text('Volver'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
+                const SizedBox(height: 16),
+                InfoCard(
+                  message: '✅ Trabajo completado. Esperando reseña del cliente.',
+                  icon: Icons.done_all_rounded,
+                  color: AppColors.info,
                 ),
               ],
             ],
@@ -849,33 +1266,107 @@ class _TechnicianRequestDetailPageState
       );
     }
 
-    // Si no ha enviado cotización, mostrar botón normal
+    // Botón para enviar cotización
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
+            color: AppColors.black.withOpacity(0.1),
+            blurRadius: 20,
             offset: const Offset(0, -5),
           ),
         ],
       ),
       child: SafeArea(
-        child: ElevatedButton.icon(
-          onPressed: _navigateToSendQuotation,
-          icon: const Icon(Icons.attach_money, size: 28),
-          label: const Text(
-            'Enviar Cotización',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        child: SizedBox(
+          width: double.infinity,
+          height: 60,
+          child: ElevatedButton(
+            onPressed: _navigateToSendQuotation,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+              foregroundColor: AppColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 0,
+              shadowColor: AppColors.success.withOpacity(0.3),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.send_rounded, size: 28),
+                SizedBox(width: 12),
+                Text(
+                  'Enviar Cotización',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
           ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  void _viewImageFullscreen(String imageUrl, int index) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: AppColors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            iconTheme: const IconThemeData(color: AppColors.white),
+            title: Text(
+              'Foto ${index + 1} de ${_request!.images!.length}',
+              style: const TextStyle(
+                color: AppColors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          body: Center(
+            child: Hero(
+              tag: 'request_image_$index',
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.contain,
+                  placeholder: (context, url) => const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.white,
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.broken_image_rounded,
+                          color: AppColors.white,
+                          size: 64,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'Error al cargar imagen',
+                          style: TextStyle(color: AppColors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -886,22 +1377,22 @@ class _TechnicianRequestDetailPageState
   Color _getQuotationStatusColor() {
     switch (_myQuotation?.status) {
       case 'accepted':
-        return Colors.green;
+        return AppColors.success;
       case 'rejected':
-        return Colors.red;
+        return AppColors.error;
       default:
-        return Colors.orange;
+        return AppColors.warning;
     }
   }
 
   IconData _getQuotationStatusIcon() {
     switch (_myQuotation?.status) {
       case 'accepted':
-        return Icons.check_circle;
+        return Icons.check_circle_rounded;
       case 'rejected':
-        return Icons.cancel;
+        return Icons.cancel_rounded;
       default:
-        return Icons.hourglass_empty;
+        return Icons.hourglass_bottom_rounded;
     }
   }
 
@@ -909,14 +1400,35 @@ class _TechnicianRequestDetailPageState
     if (_request!.status == 'completed' || _request!.status == 'rated') {
       return '✅ Trabajo Completado';
     }
-    
+
     switch (_myQuotation?.status) {
       case 'accepted':
         return '🎉 ¡Cotización Aceptada!';
       case 'rejected':
         return 'Cotización Rechazada';
       default:
-        return 'Cotización Enviada - Pendiente';
+        return 'Cotización Enviada';
+    }
+  }
+
+  IconData _getServiceIcon(String serviceType) {
+    switch (serviceType) {
+      case 'Electricista':
+        return Icons.electrical_services_rounded;
+      case 'Plomero':
+        return Icons.plumbing_rounded;
+      case 'Carpintero':
+        return Icons.carpenter_rounded;
+      case 'Pintor':
+        return Icons.format_paint_rounded;
+      case 'Mecánico':
+        return Icons.build_circle_rounded;
+      case 'Jardinero':
+        return Icons.grass_rounded;
+      case 'Limpieza':
+        return Icons.cleaning_services_rounded;
+      default:
+        return Icons.handyman_rounded;
     }
   }
 

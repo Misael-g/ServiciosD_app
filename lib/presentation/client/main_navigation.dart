@@ -97,6 +97,10 @@ class _ClientMainNavigationState extends State<ClientMainNavigation>
 
   @override
   Widget build(BuildContext context) {
+    // Detectar si es pantalla pequeña
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
@@ -107,7 +111,7 @@ class _ClientMainNavigationState extends State<ClientMainNavigation>
           color: AppColors.white,
           boxShadow: [
             BoxShadow(
-              color: AppColors.black.withValues(alpha: 0.08),
+              color: AppColors.black.withOpacity(0.08),
               blurRadius: 20,
               offset: const Offset(0, -5),
             ),
@@ -115,13 +119,16 @@ class _ClientMainNavigationState extends State<ClientMainNavigation>
         ),
         child: SafeArea(
           child: Container(
-            height: 70,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            height: isSmallScreen ? 65 : 70,
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 4 : 8,
+              vertical: 8,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: List.generate(
                 _navItems.length,
-                (index) => _buildNavItem(index),
+                (index) => _buildNavItem(index, isSmallScreen),
               ),
             ),
           ),
@@ -130,7 +137,7 @@ class _ClientMainNavigationState extends State<ClientMainNavigation>
     );
   }
 
-  Widget _buildNavItem(int index) {
+  Widget _buildNavItem(int index, bool isSmallScreen) {
     final item = _navItems[index];
     final isActive = _currentIndex == index;
 
@@ -140,17 +147,20 @@ class _ClientMainNavigationState extends State<ClientMainNavigation>
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 2 : 8,
+            vertical: 6,
+          ),
           decoration: BoxDecoration(
             gradient: isActive
                 ? LinearGradient(
                     colors: [
-                      item.color.withValues(alpha: 0.15),
-                      item.color.withValues(alpha: 0.05),
+                      item.color.withOpacity(0.15),
+                      item.color.withOpacity(0.05),
                     ],
                   )
                 : null,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -158,7 +168,7 @@ class _ClientMainNavigationState extends State<ClientMainNavigation>
             children: [
               // Ícono animado
               ScaleTransition(
-                scale: Tween<double>(begin: 1.0, end: 1.2).animate(
+                scale: Tween<double>(begin: 1.0, end: 1.15).animate(
                   CurvedAnimation(
                     parent: _iconAnimations[index],
                     curve: Curves.easeInOut,
@@ -167,33 +177,37 @@ class _ClientMainNavigationState extends State<ClientMainNavigation>
                 child: Icon(
                   isActive ? item.activeIcon : item.icon,
                   color: isActive ? item.color : AppColors.textSecondary,
-                  size: 26,
+                  size: isSmallScreen ? 22 : 24,
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: isSmallScreen ? 2 : 4),
               
-              // Label con animación
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 300),
-                style: TextStyle(
-                  fontSize: isActive ? 12 : 11,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  color: isActive ? item.color : AppColors.textSecondary,
-                  letterSpacing: 0.3,
-                ),
-                child: Text(
-                  item.label,
+              // Label responsive
+              Flexible(
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 300),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 10 : 11,
+                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                    color: isActive ? item.color : AppColors.textSecondary,
+                    letterSpacing: 0.2,
+                    height: 1.2,
+                  ),
+                  child: Text(
+                    item.label,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
               
               // Indicador de activo
-              const SizedBox(height: 4),
+              SizedBox(height: isSmallScreen ? 2 : 3),
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                width: isActive ? 20 : 0,
-                height: 3,
+                width: isActive ? (isSmallScreen ? 14 : 16) : 0,
+                height: 2.5,
                 decoration: BoxDecoration(
                   color: item.color,
                   borderRadius: BorderRadius.circular(2),
