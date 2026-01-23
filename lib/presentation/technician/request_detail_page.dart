@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/datasources/service_requests_remote_ds.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
 import '../../data/datasources/quotations_remote_ds.dart';
@@ -133,6 +134,21 @@ class _TechnicianRequestDetailPageState
         Navigator.pop(context, true);
       }
     });
+  }
+
+  Future<void> _callPhone(String phone) async {
+    final Uri url = Uri.parse('tel:$phone');
+    try {
+      if (!await launchUrl(url)) {
+        if (mounted) {
+          SnackbarHelper.showError(context, 'No se pudo abrir el teléfono');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'Error al realizar la llamada');
+      }
+    }
   }
 
   Future<void> _completeWork() async {
@@ -649,33 +665,42 @@ class _TechnicianRequestDetailPageState
                 ),
               ),
               // Botón de llamar
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.success,
-                      AppColors.success.withOpacity(0.8),
+              if (_clientProfile!.phone != null)
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.success,
+                        AppColors.success.withOpacity(0.8),
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.success.withOpacity(0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
                     ],
                   ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.success.withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _callPhone(_clientProfile!.phone!),
+                      borderRadius: BorderRadius.circular(30),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        child: const Icon(
+                          Icons.phone_rounded,
+                          color: AppColors.white,
+                          size: 28,
+                        ),
+                      ),
                     ),
-                  ],
+                  ),
                 ),
-                child: IconButton(
-                  icon: const Icon(Icons.phone_rounded),
-                  color: AppColors.white,
-                  onPressed: () {
-                    // TODO: Implementar llamada
-                    SnackbarHelper.showInfo(context, 'Función de llamada');
-                  },
-                  iconSize: 24,
-                ),
-              ),
             ],
           ),
         ],
@@ -1198,15 +1223,6 @@ class _TechnicianRequestDetailPageState
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
                               color: _getQuotationStatusColor(),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Precio: \${_myQuotation!.estimatedPrice.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
