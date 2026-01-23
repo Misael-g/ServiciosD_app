@@ -227,7 +227,7 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation>
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: BoxDecoration(
             gradient: isActive
                 ? LinearGradient(
@@ -254,36 +254,39 @@ class _TechnicianMainNavigationState extends State<TechnicianMainNavigation>
                 child: Icon(
                   isActive ? item.activeIcon : item.icon,
                   color: isActive ? item.color : AppColors.textSecondary,
-                  size: 26,
+                  size: 24,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
 
-              // Label con animación
+              // Label con límite de líneas
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 300),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: isActive ? 12 : 11,
+                  fontSize: isActive ? 11 : 10,
                   fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                   color: isActive ? item.color : AppColors.textSecondary,
-                  letterSpacing: 0.3,
+                  letterSpacing: 0.2,
                 ),
                 child: Text(
                   item.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
               ),
 
               // Indicador de activo
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                width: isActive ? 20 : 0,
-                height: 3,
+                width: isActive ? 16 : 0,
+                height: 2,
                 decoration: BoxDecoration(
                   color: item.color,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(1),
                 ),
               ),
             ],
