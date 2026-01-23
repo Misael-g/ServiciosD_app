@@ -139,7 +139,7 @@ class _TechnicianHomePageState extends State<TechnicianHomePage>
                                               '${_getGreeting()},',
                                               style: TextStyle(
                                                 fontSize: 16,
-                                                color: AppColors.white.withOpacity(0.9),
+                                                color: AppColors.white.withValues(alpha: 0.9),
                                                 fontWeight: FontWeight.w500,
                                               ),
                                             ),
@@ -162,7 +162,7 @@ class _TechnicianHomePageState extends State<TechnicianHomePage>
                                           vertical: 6,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: AppColors.white.withOpacity(0.2),
+                                          color: AppColors.white.withValues(alpha: 0.2),
                                           borderRadius: BorderRadius.circular(20),
                                         ),
                                         child: Row(
@@ -198,7 +198,7 @@ class _TechnicianHomePageState extends State<TechnicianHomePage>
                       Container(
                         margin: const EdgeInsets.only(right: 16),
                         decoration: BoxDecoration(
-                          color: AppColors.white.withOpacity(0.2),
+                          color: AppColors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: IconButton(
@@ -305,13 +305,13 @@ class _TechnicianHomePageState extends State<TechnicianHomePage>
                                             decoration: BoxDecoration(
                                               gradient: LinearGradient(
                                                 colors: [
-                                                  AppColors.primary.withOpacity(0.15),
-                                                  AppColors.primary.withOpacity(0.05),
+                                                  AppColors.primary.withValues(alpha: 0.15),
+                                                  AppColors.primary.withValues(alpha: 0.05),
                                                 ],
                                               ),
                                               borderRadius: BorderRadius.circular(20),
                                               border: Border.all(
-                                                color: AppColors.primary.withOpacity(0.3),
+                                                color: AppColors.primary.withValues(alpha: 0.3),
                                               ),
                                             ),
                                             child: Row(
@@ -412,7 +412,7 @@ class _TechnicianHomePageState extends State<TechnicianHomePage>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, size: 32, color: color),
@@ -468,7 +468,7 @@ class _TechnicianHomePageState extends State<TechnicianHomePage>
                 gradient: LinearGradient(
                   colors: [
                     color,
-                    color.withOpacity(0.8),
+                    color.withValues(alpha: 0.8),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(16),

@@ -305,7 +305,7 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
                                   color: AppColors.white,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    color: AppColors.error.withOpacity(0.3),
+                                    color: AppColors.error.withValues(alpha: 0.3),
                                     width: 1.5,
                                   ),
                                 ),
@@ -315,7 +315,7 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
                                     Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: AppColors.error.withOpacity(0.1),
+                                        color: AppColors.error.withValues(alpha: 0.1),
                                         shape: BoxShape.circle,
                                       ),
                                       child: const Icon(
@@ -364,8 +364,8 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.primary.withOpacity(0.3),
-                    AppColors.primary.withOpacity(0.1),
+                    AppColors.primary.withValues(alpha: 0.3),
+                    AppColors.primary.withValues(alpha: 0.1),
                   ],
                 ),
               ),
@@ -415,10 +415,10 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withOpacity(0.1),
+                  color: AppColors.warning.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: AppColors.warning.withOpacity(0.3),
+                    color: AppColors.warning.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -506,7 +506,7 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
               gradient: LinearGradient(
                 colors: [
                   color,
-                  color.withOpacity(0.8),
+                  color.withValues(alpha: 0.8),
                 ],
               ),
               borderRadius: BorderRadius.circular(16),
@@ -566,7 +566,7 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 24),

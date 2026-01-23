@@ -107,7 +107,7 @@ class _ClientMainNavigationState extends State<ClientMainNavigation>
           color: AppColors.white,
           boxShadow: [
             BoxShadow(
-              color: AppColors.black.withOpacity(0.08),
+              color: AppColors.black.withValues(alpha: 0.08),
               blurRadius: 20,
               offset: const Offset(0, -5),
             ),
@@ -145,8 +145,8 @@ class _ClientMainNavigationState extends State<ClientMainNavigation>
             gradient: isActive
                 ? LinearGradient(
                     colors: [
-                      item.color.withOpacity(0.15),
-                      item.color.withOpacity(0.05),
+                      item.color.withValues(alpha: 0.15),
+                      item.color.withValues(alpha: 0.05),
                     ],
                   )
                 : null,

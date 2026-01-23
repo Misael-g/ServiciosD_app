@@ -145,10 +145,10 @@ class _SendQuotationPageState extends State<SendQuotationPage>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.info.withOpacity(0.1),
+                  color: AppColors.info.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: AppColors.info.withOpacity(0.3),
+                    color: AppColors.info.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -261,7 +261,7 @@ class _SendQuotationPageState extends State<SendQuotationPage>
                     end: Alignment.bottomRight,
                     colors: [
                       AppColors.success,
-                      AppColors.success.withOpacity(0.8),
+                      AppColors.success.withValues(alpha: 0.8),
                     ],
                   ),
                 ),
@@ -405,7 +405,7 @@ class _SendQuotationPageState extends State<SendQuotationPage>
           color: AppColors.white,
           boxShadow: [
             BoxShadow(
-              color: AppColors.black.withOpacity(0.08),
+              color: AppColors.black.withValues(alpha: 0.08),
               blurRadius: 20,
               offset: const Offset(0, -5),
             ),
@@ -460,13 +460,13 @@ class _SendQuotationPageState extends State<SendQuotationPage>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.info.withOpacity(0.15),
-            AppColors.info.withOpacity(0.05),
+            AppColors.info.withValues(alpha: 0.15),
+            AppColors.info.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.info.withOpacity(0.3),
+          color: AppColors.info.withValues(alpha: 0.3),
           width: 1.5,
         ),
       ),
@@ -478,7 +478,7 @@ class _SendQuotationPageState extends State<SendQuotationPage>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.info.withOpacity(0.2),
+                  color: AppColors.info.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -525,10 +525,10 @@ class _SendQuotationPageState extends State<SendQuotationPage>
               vertical: 6,
             ),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.15),
+              color: AppColors.primary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: AppColors.primary.withOpacity(0.3),
+                color: AppColors.primary.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
@@ -584,7 +584,7 @@ class _SendQuotationPageState extends State<SendQuotationPage>
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -626,13 +626,13 @@ class _SendQuotationPageState extends State<SendQuotationPage>
           end: Alignment.bottomRight,
           colors: [
             AppColors.success,
-            AppColors.success.withOpacity(0.8),
+            AppColors.success.withValues(alpha: 0.8),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.success.withOpacity(0.3),
+            color: AppColors.success.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -643,7 +643,7 @@ class _SendQuotationPageState extends State<SendQuotationPage>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.white.withOpacity(0.2),
+              color: AppColors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -660,7 +660,7 @@ class _SendQuotationPageState extends State<SendQuotationPage>
                 Text(
                   'TOTAL',
                   style: TextStyle(
-                    color: AppColors.white.withOpacity(0.9),
+                    color: AppColors.white.withValues(alpha: 0.9),
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1,
@@ -712,7 +712,7 @@ class _SendQuotationPageState extends State<SendQuotationPage>
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.info.withOpacity(0.1),
+              color: AppColors.info.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -805,7 +805,7 @@ class _SendQuotationPageState extends State<SendQuotationPage>
               ? LinearGradient(
                   colors: [
                     AppColors.warning,
-                    AppColors.warning.withOpacity(0.8),
+                    AppColors.warning.withValues(alpha: 0.8),
                   ],
                 )
               : null,

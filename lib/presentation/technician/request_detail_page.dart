@@ -134,9 +134,9 @@ class _TechnicianRequestDetailPageState
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.1),
+                color: AppColors.success.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.success.withOpacity(0.3)),
+                border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
               ),
               child: Column(
                 children: [
@@ -221,7 +221,7 @@ class _TechnicianRequestDetailPageState
                               end: Alignment.bottomRight,
                               colors: [
                                 AppColors.info,
-                                AppColors.info.withOpacity(0.8),
+                                AppColors.info.withValues(alpha: 0.8),
                               ],
                             ),
                           ),
@@ -296,7 +296,7 @@ class _TechnicianRequestDetailPageState
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -316,7 +316,7 @@ class _TechnicianRequestDetailPageState
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.15),
+                        color: AppColors.primary.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -452,7 +452,7 @@ class _TechnicianRequestDetailPageState
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.1),
+                  color: AppColors.success.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -555,19 +555,19 @@ class _TechnicianRequestDetailPageState
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.info.withOpacity(0.15),
-            AppColors.info.withOpacity(0.05),
+            AppColors.info.withValues(alpha: 0.15),
+            AppColors.info.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.info.withOpacity(0.3)),
+        border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.info.withOpacity(0.2),
+              color: AppColors.info.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -607,7 +607,7 @@ class _TechnicianRequestDetailPageState
           color: AppColors.white,
           boxShadow: [
             BoxShadow(
-              color: AppColors.black.withOpacity(0.08),
+              color: AppColors.black.withValues(alpha: 0.08),
               blurRadius: 20,
               offset: const Offset(0, -5),
             ),
@@ -620,7 +620,7 @@ class _TechnicianRequestDetailPageState
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: _getQuotationStatusColor().withOpacity(0.1),
+                  color: _getQuotationStatusColor().withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: _getQuotationStatusColor(),
@@ -685,7 +685,7 @@ class _TechnicianRequestDetailPageState
         color: AppColors.white,
         boxShadow: [
           BoxShadow(
-            color: AppColors.black.withOpacity(0.08),
+            color: AppColors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),

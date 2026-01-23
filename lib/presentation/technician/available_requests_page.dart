@@ -144,7 +144,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
                     end: Alignment.bottomRight,
                     colors: [
                       AppColors.success,
-                      AppColors.success.withOpacity(0.8),
+                      AppColors.success.withValues(alpha: 0.8),
                     ],
                   ),
                 ),
@@ -184,7 +184,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
                                   vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.white.withOpacity(0.2),
+                                  color: AppColors.white.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Row(
@@ -220,7 +220,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
               Container(
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.white.withOpacity(0.2),
+                  color: AppColors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
@@ -240,7 +240,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
               Container(
                 margin: const EdgeInsets.only(right: 16),
                 decoration: BoxDecoration(
-                  color: AppColors.white.withOpacity(0.2),
+                  color: AppColors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
@@ -299,7 +299,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppColors.error.withOpacity(0.1),
+              color: AppColors.error.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -434,7 +434,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
                     ),
                     radius: 10000,
                     useRadiusInMeter: true,
-                    color: AppColors.success.withOpacity(0.1),
+                    color: AppColors.success.withValues(alpha: 0.1),
                     borderColor: AppColors.success,
                     borderStrokeWidth: 2,
                   ),
@@ -461,7 +461,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
                             gradient: LinearGradient(
                               colors: [
                                 AppColors.success,
-                                AppColors.success.withOpacity(0.8),
+                                AppColors.success.withValues(alpha: 0.8),
                               ],
                             ),
                             borderRadius: BorderRadius.circular(12),
@@ -490,7 +490,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
                               gradient: LinearGradient(
                                 colors: [
                                   AppColors.success,
-                                  AppColors.success.withOpacity(0.8),
+                                  AppColors.success.withValues(alpha: 0.8),
                                 ],
                               ),
                               shape: BoxShape.circle,
@@ -658,7 +658,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: iSentQuotation 
-                ? AppColors.success.withOpacity(0.3)
+                ? AppColors.success.withValues(alpha: 0.3)
                 : AppColors.border,
             width: iSentQuotation ? 2 : 1,
           ),
@@ -670,7 +670,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.08),
+                color: statusColor.withValues(alpha: 0.08),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
@@ -681,7 +681,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.15),
+                      color: statusColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -712,7 +712,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                            color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -737,7 +737,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
                         gradient: LinearGradient(
                           colors: [
                             AppColors.info,
-                            AppColors.info.withOpacity(0.8),
+                            AppColors.info.withValues(alpha: 0.8),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(12),
@@ -795,7 +795,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.success.withOpacity(0.15),
+                            color: AppColors.success.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: AppColors.success,
@@ -845,7 +845,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage>
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color, size: 24),

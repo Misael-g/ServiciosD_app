@@ -7,8 +7,9 @@ import '../../data/models/profile_model.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/config/supabase_config.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/custom_widgets.dart';
 
-/// Pantalla de edición de perfil para Técnico (SIN ubicación)
 class TechnicianEditProfilePage extends StatefulWidget {
   final ProfileModel profile;
 
@@ -23,7 +24,7 @@ class TechnicianEditProfilePage extends StatefulWidget {
 }
 
 class _TechnicianEditProfilePageState
-    extends State<TechnicianEditProfilePage> {
+    extends State<TechnicianEditProfilePage> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -36,8 +37,8 @@ class _TechnicianEditProfilePageState
   File? _selectedImage;
   String? _profilePictureUrl;
   bool _isLoading = false;
+  late AnimationController _animationController;
 
-  // Especialidades
   final List<String> _availableSpecialties = [
     'Electricista',
     'Plomero',
@@ -58,7 +59,12 @@ class _TechnicianEditProfilePageState
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     _loadProfileData();
+    _animationController.forward();
   }
 
   void _loadProfileData() {
@@ -74,6 +80,7 @@ class _TechnicianEditProfilePageState
     _fullNameController.dispose();
     _phoneController.dispose();
     _bioController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -134,17 +141,14 @@ class _TechnicianEditProfilePageState
         throw Exception('No hay usuario autenticado');
       }
 
-      // Subir imagen si hay una nueva
       String? imageUrl = _profilePictureUrl;
       if (_selectedImage != null) {
-        SnackbarHelper.showLoading(context, 'Subiendo foto...');
         imageUrl = await _storageDS.uploadProfilePicture(
           userId: userId,
           file: _selectedImage!,
         );
       }
 
-      // Preparar datos (SIN ubicación)
       final updates = <String, dynamic>{
         'full_name': _fullNameController.text.trim(),
         'phone': _phoneController.text.trim(),
@@ -176,39 +180,81 @@ class _TechnicianEditProfilePageState
   void _showImageOptions() {
     showModalBottomSheet(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Seleccionar de Galería'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Tomar Foto'),
-              onTap: () {
-                Navigator.pop(context);
-                _takePhoto();
-              },
-            ),
-            if (_selectedImage != null || _profilePictureUrl != null)
-              ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('Eliminar Foto'),
-                onTap: () {
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 20),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Foto de Perfil',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              _buildImageOption(
+                Icons.photo_library_rounded,
+                'Seleccionar de Galería',
+                AppColors.primary,
+                () {
                   Navigator.pop(context);
-                  setState(() {
-                    _selectedImage = null;
-                    _profilePictureUrl = null;
-                  });
+                  _pickImage();
                 },
               ),
-          ],
+
+              _buildImageOption(
+                Icons.camera_alt_rounded,
+                'Tomar Foto',
+                AppColors.success,
+                () {
+                  Navigator.pop(context);
+                  _takePhoto();
+                },
+              ),
+
+              if (_selectedImage != null || _profilePictureUrl != null)
+                _buildImageOption(
+                  Icons.delete_rounded,
+                  'Eliminar Foto',
+                  AppColors.error,
+                  () {
+                    Navigator.pop(context);
+                    setState(() {
+                      _selectedImage = null;
+                      _profilePictureUrl = null;
+                    });
+                  },
+                ),
+
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
@@ -218,65 +264,162 @@ class _TechnicianEditProfilePageState
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.7,
         minChildSize: 0.5,
         maxChildSize: 0.9,
         expand: false,
         builder: (context, scrollController) {
-          return StatefulBuilder(
-            builder: (context, setModalState) {
-              return Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        const Text(
-                          'Selecciona tus especialidades',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Listo'),
-                        ),
-                      ],
+          return Container(
+            decoration: const BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(30),
+                topRight: Radius.circular(30),
+              ),
+            ),
+            child: StatefulBuilder(
+              builder: (context, setModalState) {
+                return Column(
+                  children: [
+                    // Handle
+                    Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 20),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
-                  const Divider(height: 1),
-                  Expanded(
-                    child: ListView.builder(
-                      controller: scrollController,
-                      itemCount: _availableSpecialties.length,
-                      itemBuilder: (context, index) {
-                        final specialty = _availableSpecialties[index];
-                        final isSelected =
-                            _selectedSpecialties.contains(specialty);
 
-                        return CheckboxListTile(
-                          title: Text(specialty),
-                          value: isSelected,
-                          onChanged: (bool? value) {
-                            setModalState(() {
-                              if (value == true) {
-                                _selectedSpecialties.add(specialty);
-                              } else {
-                                _selectedSpecialties.remove(specialty);
-                              }
-                            });
-                            setState(() {});
-                          },
-                        );
-                      },
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.build_circle_rounded,
+                              color: AppColors.primary,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'Especialidades',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {});
+                              Navigator.pop(context);
+                            },
+                            child: const Text(
+                              'Listo',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              );
-            },
+
+                    const SizedBox(height: 8),
+                    const Divider(height: 1),
+                    const SizedBox(height: 16),
+
+                    // Lista
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: _availableSpecialties.length,
+                        itemBuilder: (context, index) {
+                          final specialty = _availableSpecialties[index];
+                          final isSelected =
+                              _selectedSpecialties.contains(specialty);
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: InkWell(
+                              onTap: () {
+                                setModalState(() {
+                                  if (isSelected) {
+                                    _selectedSpecialties.remove(specialty);
+                                  } else {
+                                    _selectedSpecialties.add(specialty);
+                                  }
+                                });
+                                setState(() {});
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primary.withValues(alpha: 0.1)
+                                      : AppColors.background,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : AppColors.border,
+                                    width: isSelected ? 2 : 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isSelected
+                                          ? Icons.check_circle_rounded
+                                          : Icons.radio_button_unchecked_rounded,
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : AppColors.textSecondary,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Text(
+                                        specialty,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w600
+                                              : FontWeight.w500,
+                                          color: isSelected
+                                              ? AppColors.primary
+                                              : AppColors.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           );
         },
       ),
@@ -286,192 +429,470 @@ class _TechnicianEditProfilePageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Editar Perfil'),
-        actions: [
-          if (!_isLoading)
-            IconButton(
-              icon: const Icon(Icons.check),
-              onPressed: _saveProfile,
+      backgroundColor: AppColors.background,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // AppBar
+          SliverAppBar(
+            expandedHeight: 120,
+            floating: false,
+            pinned: true,
+            actions: [
+              if (!_isLoading)
+                IconButton(
+                  icon: const Icon(Icons.check_rounded),
+                  onPressed: _saveProfile,
+                  tooltip: 'Guardar',
+                ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.primary,
+                      AppColors.primaryDark,
+                    ],
+                  ),
+                ),
+              ),
+              title: const Text(
+                'Editar Perfil',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              centerTitle: true,
             ),
+          ),
+
+          // Contenido
+          SliverToBoxAdapter(
+            child: FadeTransition(
+              opacity: _animationController,
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 24),
+
+                    // Avatar
+                    _buildAvatarSection(),
+                    const SizedBox(height: 32),
+
+                    // Formulario
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SectionHeader(
+                            title: 'Información Personal',
+                            icon: Icons.person_rounded,
+                          ),
+                          const SizedBox(height: 16),
+
+                          _buildTextField(
+                            controller: _fullNameController,
+                            label: 'Nombre Completo',
+                            hint: 'Juan Pérez',
+                            icon: Icons.person_outline_rounded,
+                            color: AppColors.primary,
+                            validator: Validators.validateFullName,
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          _buildTextField(
+                            controller: _phoneController,
+                            label: 'Teléfono',
+                            hint: '0999123456',
+                            icon: Icons.phone_rounded,
+                            color: AppColors.success,
+                            keyboardType: TextInputType.phone,
+                            validator: Validators.validatePhone,
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          _buildTextField(
+                            initialValue: widget.profile.email,
+                            label: 'Correo Electrónico',
+                            hint: 'tu@email.com',
+                            icon: Icons.email_rounded,
+                            color: AppColors.info,
+                            enabled: false,
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          // Especialidades
+                          const SectionHeader(
+                            title: 'Especialidades',
+                            icon: Icons.build_circle_rounded,
+                          ),
+                          const SizedBox(height: 16),
+
+                          InkWell(
+                            onTap: _isLoading ? null : _showSpecialtiesSelector,
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: AppColors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.border),
+                                boxShadow: AppShadows.small,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Icon(
+                                          Icons.workspace_premium_rounded,
+                                          color: AppColors.primary,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Expanded(
+                                        child: Text(
+                                          'Tus especialidades',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                                      const Icon(
+                                        Icons.arrow_drop_down_rounded,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ],
+                                  ),
+                                  if (_selectedSpecialties.isNotEmpty) ...[
+                                    const SizedBox(height: 16),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: _selectedSpecialties
+                                          .map((s) => Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 12,
+                                                  vertical: 8,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.primary
+                                                      .withValues(alpha: 0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                  border: Border.all(
+                                                    color: AppColors.primary
+                                                        .withValues(alpha: 0.3),
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.verified_rounded,
+                                                      size: 14,
+                                                      color: AppColors.primary,
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      s,
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: AppColors.primary,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ))
+                                          .toList(),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          // Bio
+                          const SectionHeader(
+                            title: 'Descripción',
+                            icon: Icons.info_rounded,
+                          ),
+                          const SizedBox(height: 16),
+
+                          Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.border),
+                              boxShadow: AppShadows.small,
+                            ),
+                            child: TextFormField(
+                              controller: _bioController,
+                              maxLines: 5,
+                              decoration: const InputDecoration(
+                                hintText:
+                                    'Cuéntanos sobre tu experiencia como técnico...',
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.all(20),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'La descripción es requerida';
+                                }
+                                if (value.length < 20) {
+                                  return 'Escribe al menos 20 caracteres';
+                                }
+                                return null;
+                              },
+                              enabled: !_isLoading,
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          InfoCard(
+                            message:
+                                'Tu ubicación GPS se actualiza automáticamente cuando accedes a solicitudes',
+                            icon: Icons.info_rounded,
+                            color: AppColors.info,
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          // Botón guardar
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton.icon(
+                              onPressed: _isLoading ? null : _saveProfile,
+                              icon: _isLoading
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                          AppColors.white,
+                                        ),
+                                      ),
+                                    )
+                                  : const Icon(Icons.save_rounded, size: 24),
+                              label: Text(
+                                _isLoading ? 'Guardando...' : 'Guardar Cambios',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.success,
+                                foregroundColor: AppColors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 40),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Foto
-            Center(
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    backgroundImage: _selectedImage != null
-                        ? FileImage(_selectedImage!)
-                        : (_profilePictureUrl != null
-                            ? NetworkImage(_profilePictureUrl!)
-                            : null) as ImageProvider?,
-                    child: _selectedImage == null &&
-                            _profilePictureUrl == null
-                        ? Text(
-                            widget.profile.fullName[0].toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 48,
-                              color: Colors.white,
-                            ),
-                          )
-                        : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: CircleAvatar(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      child: IconButton(
-                        icon: const Icon(Icons.edit,
-                            color: Colors.white, size: 20),
-                        onPressed: _showImageOptions,
-                      ),
-                    ),
-                  ),
+    );
+  }
+
+  Widget _buildAvatarSection() {
+    return Center(
+      child: Stack(
+        children: [
+          // Círculo decorativo
+          Container(
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.3),
+                  AppColors.primary.withValues(alpha: 0.1),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
-
-            // Nombre
-            TextFormField(
-              controller: _fullNameController,
-              decoration: const InputDecoration(
-                labelText: 'Nombre Completo',
-                prefixIcon: Icon(Icons.person_outline),
+          ),
+          // Avatar
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.white,
+                width: 4,
               ),
-              validator: Validators.validateFullName,
-              enabled: !_isLoading,
+              boxShadow: AppShadows.medium,
             ),
-            const SizedBox(height: 16),
-
-            // Teléfono
-            TextFormField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Teléfono',
-                prefixIcon: Icon(Icons.phone_outlined),
-              ),
-              validator: Validators.validatePhone,
-              enabled: !_isLoading,
+            child: CircleAvatar(
+              radius: 60,
+              backgroundColor: AppColors.primary,
+              backgroundImage: _selectedImage != null
+                  ? FileImage(_selectedImage!)
+                  : (_profilePictureUrl != null
+                      ? NetworkImage(_profilePictureUrl!)
+                      : null) as ImageProvider?,
+              child:
+                  _selectedImage == null && _profilePictureUrl == null
+                      ? Text(
+                          widget.profile.fullName[0].toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 48,
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                      : null,
             ),
-            const SizedBox(height: 16),
-
-            // Email (no editable)
-            TextFormField(
-              initialValue: widget.profile.email,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                prefixIcon: Icon(Icons.email_outlined),
-                enabled: false,
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Especialidades
-            InkWell(
-              onTap: _isLoading ? null : _showSpecialtiesSelector,
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Especialidades',
-                  prefixIcon: Icon(Icons.build_outlined),
-                  suffixIcon: Icon(Icons.arrow_drop_down),
-                ),
-                child: _selectedSpecialties.isEmpty
-                    ? const Text(
-                        'Selecciona tus especialidades',
-                        style: TextStyle(color: Colors.grey),
-                      )
-                    : Wrap(
-                        spacing: 4,
-                        runSpacing: 4,
-                        children: _selectedSpecialties
-                            .map((s) => Chip(
-                                  label: Text(s,
-                                      style: const TextStyle(fontSize: 12)),
-                                  visualDensity: VisualDensity.compact,
-                                ))
-                            .toList(),
-                      ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Biografía
-            TextFormField(
-              controller: _bioController,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Descripción / Biografía',
-                hintText: 'Cuéntanos sobre tu experiencia...',
-                prefixIcon: Icon(Icons.info_outline),
-                alignLabelWithHint: true,
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'La descripción es requerida';
-                }
-                if (value.length < 20) {
-                  return 'Escribe al menos 20 caracteres';
-                }
-                return null;
-              },
-              enabled: !_isLoading,
-            ),
-            const SizedBox(height: 24),
-
-            // Nota informativa
-            Container(
-              padding: const EdgeInsets.all(16),
+          ),
+          // Botón editar
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
               decoration: BoxDecoration(
-                color: Colors.blue[50],
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary,
+                    AppColors.primaryDark,
+                  ],
+                ),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.white,
+                  width: 3,
+                ),
+                boxShadow: AppShadows.medium,
+              ),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.camera_alt_rounded,
+                  color: AppColors.white,
+                  size: 22,
+                ),
+                onPressed: _showImageOptions,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    TextEditingController? controller,
+    String? initialValue,
+    required String label,
+    required String hint,
+    required IconData icon,
+    required Color color,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+    bool enabled = true,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+        boxShadow: enabled ? AppShadows.small : null,
+      ),
+      child: TextFormField(
+        controller: controller,
+        initialValue: initialValue,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          prefixIcon: Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.all(20),
+          enabled: enabled,
+        ),
+        keyboardType: keyboardType,
+        validator: validator,
+        textCapitalization: TextCapitalization.words,
+      ),
+    );
+  }
+
+  Widget _buildImageOption(
+    IconData icon,
+    String title,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.blue[700]),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Tu ubicación GPS se actualiza automáticamente cuando accedes a la pestaña de solicitudes',
-                      style: TextStyle(
-                        color: Colors.blue[900],
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              child: Icon(icon, color: color, size: 24),
             ),
-            const SizedBox(height: 32),
-
-            // Botón guardar
-            ElevatedButton(
-              onPressed: _isLoading ? null : _saveProfile,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+            const SizedBox(width: 16),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: color,
               ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Text('Guardar Cambios'),
             ),
           ],
         ),

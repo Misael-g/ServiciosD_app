@@ -170,7 +170,7 @@ class _MyQuotationsPageState extends State<MyQuotationsPage>
                     end: Alignment.bottomRight,
                     colors: [
                       AppColors.warning,
-                      AppColors.warning.withOpacity(0.8),
+                      AppColors.warning.withValues(alpha: 0.8),
                     ],
                   ),
                 ),
@@ -274,7 +274,7 @@ class _MyQuotationsPageState extends State<MyQuotationsPage>
                 ? LinearGradient(
                     colors: [
                       AppColors.warning,
-                      AppColors.warning.withOpacity(0.8),
+                      AppColors.warning.withValues(alpha: 0.8),
                     ],
                   )
                 : null,
@@ -355,7 +355,7 @@ class _MyQuotationsPageState extends State<MyQuotationsPage>
         color: AppColors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: statusColor.withOpacity(0.3),
+          color: statusColor.withValues(alpha: 0.3),
           width: 2,
         ),
         boxShadow: AppShadows.small,
@@ -366,7 +366,7 @@ class _MyQuotationsPageState extends State<MyQuotationsPage>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
+              color: statusColor.withValues(alpha: 0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
@@ -467,8 +467,8 @@ class _MyQuotationsPageState extends State<MyQuotationsPage>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        AppColors.success.withOpacity(0.15),
-                        AppColors.success.withOpacity(0.05),
+                        AppColors.success.withValues(alpha: 0.15),
+                        AppColors.success.withValues(alpha: 0.05),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(12),

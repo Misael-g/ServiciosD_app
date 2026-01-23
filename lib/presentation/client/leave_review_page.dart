@@ -127,7 +127,7 @@ class _LeaveReviewPageState extends State<LeaveReviewPage>
                       itemCount: 5,
                       itemSize: 56,
                       itemPadding: const EdgeInsets.symmetric(horizontal: 4),
-                      glowColor: AppColors.warning.withOpacity(0.3),
+                      glowColor: AppColors.warning.withValues(alpha: 0.3),
                       itemBuilder: (context, _) => const Icon(
                         Icons.star_rounded,
                         color: AppColors.warning,
@@ -145,13 +145,13 @@ class _LeaveReviewPageState extends State<LeaveReviewPage>
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            _getRatingColor(_overallRating).withOpacity(0.15),
-                            _getRatingColor(_overallRating).withOpacity(0.05),
+                            _getRatingColor(_overallRating).withValues(alpha: 0.15),
+                            _getRatingColor(_overallRating).withValues(alpha: 0.05),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: _getRatingColor(_overallRating).withOpacity(0.3),
+                          color: _getRatingColor(_overallRating).withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(
@@ -355,13 +355,13 @@ class _LeaveReviewPageState extends State<LeaveReviewPage>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primary.withOpacity(0.15),
-            AppColors.primary.withOpacity(0.05),
+            AppColors.primary.withValues(alpha: 0.15),
+            AppColors.primary.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.primary.withOpacity(0.3),
+          color: AppColors.primary.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -372,7 +372,7 @@ class _LeaveReviewPageState extends State<LeaveReviewPage>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.2),
+                  color: AppColors.primary.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -439,7 +439,7 @@ class _LeaveReviewPageState extends State<LeaveReviewPage>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, size: 20, color: color),
@@ -462,9 +462,9 @@ class _LeaveReviewPageState extends State<LeaveReviewPage>
                 child: SliderTheme(
                   data: SliderThemeData(
                     activeTrackColor: color,
-                    inactiveTrackColor: color.withOpacity(0.2),
+                    inactiveTrackColor: color.withValues(alpha: 0.2),
                     thumbColor: color,
-                    overlayColor: color.withOpacity(0.2),
+                    overlayColor: color.withValues(alpha: 0.2),
                     trackHeight: 6,
                   ),
                   child: Slider(
@@ -483,8 +483,8 @@ class _LeaveReviewPageState extends State<LeaveReviewPage>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      color.withOpacity(0.15),
-                      color.withOpacity(0.05),
+                      color.withValues(alpha: 0.15),
+                      color.withValues(alpha: 0.05),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(12),
