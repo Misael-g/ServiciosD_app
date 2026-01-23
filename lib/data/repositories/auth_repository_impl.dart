@@ -22,6 +22,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String fullName,
     required String role,
     String? phone,
+    List<String>? specialties, // 🆕 AGREGAR
   }) async {
     try {
       print('🟢 [AUTH_REPO] Iniciando proceso de registro');
@@ -29,6 +30,9 @@ class AuthRepositoryImpl implements AuthRepository {
       print('   Nombre: $fullName');
       print('   Rol: $role');
       print('   Teléfono: ${phone ?? "no proporcionado"}');
+      if (specialties != null) {
+        print('   Especialidades: $specialties');
+      }
       
       // NUEVO: Verificar si el email ya existe
       try {
@@ -57,6 +61,7 @@ class AuthRepositoryImpl implements AuthRepository {
         fullName: fullName,
         role: role,
         phone: phone, // ← Asegurarse de pasar phone
+        specialties: specialties, // 🆕 AGREGAR
       );
 
       print('✅ [AUTH_REPO] Usuario registrado exitosamente');

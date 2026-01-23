@@ -12,6 +12,7 @@ class AuthRemoteDataSource {
     required String fullName,
     required String role,
     String? phone, 
+    List<String>? specialties, // 🆕 AGREGAR
   }) async {
     try {
       print('🔵 [AUTH_DS] Iniciando registro...');
@@ -19,6 +20,9 @@ class AuthRemoteDataSource {
       print('   Nombre: $fullName');
       print('   Rol: $role');
       print('   Teléfono: ${phone ?? "no proporcionado"}'); // ← AGREGADO
+      if (specialties != null) {
+        print('   Especialidades: $specialties');
+      }
 
       // Validar que el rol no sea admin
       if (role == 'admin') {
@@ -35,6 +39,8 @@ class AuthRemoteDataSource {
           'full_name': fullName,
           'role': role,
           if (phone != null && phone.isNotEmpty) 'phone': phone, // ← AGREGADO
+          if (specialties != null && specialties.isNotEmpty) // 🆕 AGREGAR
+            'specialties': specialties,
         },
       );
 

@@ -32,6 +32,23 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _obscureConfirmPassword = true;
   String? _selectedRole;
 
+  // 🆕 Especialidades para técnicos
+  final List<String> _availableSpecialties = [
+    'Electricista',
+    'Plomero',
+    'Carpintero',
+    'Pintor',
+    'Mecánico',
+    'Jardinero',
+    'Limpieza',
+    'Reparación de Electrodomésticos',
+    'Instalación de TV/Internet',
+    'Aire Acondicionado',
+    'Cerrajero',
+    'Albañil',
+  ];
+  final List<String> _selectedSpecialties = [];
+
   @override
   void initState() {
     super.initState();
@@ -56,6 +73,15 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    // 🆕 Validar especialidades para técnicos
+    if (_selectedRole == UserRoles.technician && _selectedSpecialties.isEmpty) {
+      SnackbarHelper.showError(
+        context,
+        'Selecciona al menos una especialidad',
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -63,26 +89,31 @@ class _RegisterPageState extends State<RegisterPage> {
       print('   Email: ${_emailController.text.trim()}');
       print('   Nombre: ${_fullNameController.text.trim()}');
       print('   Rol: $_selectedRole');
-      print('   Teléfono: ${_phoneController.text.trim()}'); // ← LOG AGREGADO
+      print('   Teléfono: ${_phoneController.text.trim()}');
+      if (_selectedRole == UserRoles.technician) {
+        print('   Especialidades: $_selectedSpecialties');
+      }
       
       final authRepository = context.read<AuthRepository>();
       
-      // CORRECCIÓN: Agregar el parámetro phone
       await authRepository.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         fullName: _fullNameController.text.trim(),
         role: _selectedRole!,
-        phone: _phoneController.text.trim().isEmpty  // ← AGREGADO
+        phone: _phoneController.text.trim().isEmpty
             ? null 
             : _phoneController.text.trim(),
+        specialties: _selectedRole == UserRoles.technician // 🆕 AGREGAR
+            ? _selectedSpecialties
+            : null,
       );
 
       print('✅ [REGISTER] Registro exitoso');
 
       if (mounted) {
         final message = _selectedRole == UserRoles.technician
-            ? '¡Cuenta creada! Revisa tu email para confirmar.'
+            ? '¡Cuenta creada! Tu solicitud está pendiente de aprobación.'
             : '¡Cuenta creada! Revisa tu email para confirmar.';
             
         SnackbarHelper.showSuccess(context, message);
@@ -123,6 +154,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isTechnician = _selectedRole == UserRoles.technician;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Crear Cuenta'),
@@ -228,11 +261,19 @@ class _RegisterPageState extends State<RegisterPage> {
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Teléfono',
-                    prefixIcon: Icon(Icons.phone_outlined),
+                  decoration: InputDecoration(
+                    labelText: isTechnician ? 'Teléfono *' : 'Teléfono',
+                    prefixIcon: const Icon(Icons.phone_outlined),
+                    helperText: isTechnician ? 'Obligatorio para técnicos' : null,
                   ),
-                  validator: Validators.validatePhone,
+                  validator: isTechnician
+                      ? (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'El teléfono es obligatorio para técnicos';
+                          }
+                          return Validators.validatePhone(value);
+                        }
+                      : Validators.validatePhone,
                   enabled: !_isLoading,
                 ),
                 const SizedBox(height: 16),
@@ -290,8 +331,126 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 24),
 
+                // 🆕 ESPECIALIDADES (Solo para técnicos)
+                if (isTechnician) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.work_outline, color: Colors.blue[700]),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Especialidades *',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue[900],
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Selecciona tus áreas de especialidad. Esto ayudará a los clientes a encontrarte.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[900],
+                          ),
+                        ),
+                        if (_selectedSpecialties.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              '⚠️ Debes seleccionar al menos una',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.red[700],
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Chips de especialidades
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _availableSpecialties.map((specialty) {
+                      final isSelected = _selectedSpecialties.contains(specialty);
+
+                      return FilterChip(
+                        label: Text(specialty),
+                        selected: isSelected,
+                        onSelected: _isLoading
+                            ? null
+                            : (selected) {
+                                setState(() {
+                                  if (selected) {
+                                    _selectedSpecialties.add(specialty);
+                                  } else {
+                                    _selectedSpecialties.remove(specialty);
+                                  }
+                                });
+                              },
+                        backgroundColor: Colors.grey.shade200,
+                        selectedColor: Colors.orange.shade100,
+                        checkmarkColor: Colors.orange.shade900,
+                        labelStyle: TextStyle(
+                          color: isSelected
+                              ? Colors.orange.shade900
+                              : Colors.grey.shade700,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+
+                  if (_selectedSpecialties.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green[700], size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Has seleccionado ${_selectedSpecialties.length} especialidad(es)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.green[900],
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+                ],
+
                 // Información para técnicos
-                if (_selectedRole == UserRoles.technician)
+                if (isTechnician)
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(

@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../data/datasources/service_requests_remote_ds.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
+import '../../data/datasources/quotations_remote_ds.dart'; // 🆕
 import '../../data/models/service_request_model.dart';
 import '../../core/utils/location_helper.dart';
 import '../../core/utils/snackbar_helper.dart';
@@ -23,6 +24,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
   final ServiceRequestsRemoteDataSource _serviceRequestsDS =
       ServiceRequestsRemoteDataSource();
   final ProfilesRemoteDataSource _profilesDS = ProfilesRemoteDataSource();
+  final QuotationsRemoteDataSource _quotationsDS = QuotationsRemoteDataSource(); // 🆕
   final MapController _mapController = MapController();
 
   List<ServiceRequestModel> _requests = [];
@@ -30,6 +32,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
   bool _isLoading = true;
   bool _isUpdatingLocation = false;
   bool _showMap = true; // Toggle entre mapa y lista
+  final Map<String, bool> _myQuotationsCache = {}; // 🆕 Cache de cotizaciones propias
 
   @override
   void initState() {
@@ -116,6 +119,13 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
         longitude: position.longitude,
         radiusMeters: 10000, // 10km
       );
+
+      // 🆕 Verificar mis cotizaciones
+      _myQuotationsCache.clear();
+      for (var request in requests) {
+        final myQuotation = await _quotationsDS.getMyQuotationForRequest(request.id);
+        _myQuotationsCache[request.id] = myQuotation != null;
+      }
 
       setState(() {
         _requests = requests;
@@ -511,7 +521,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      ServiceStates.getDisplayName(request.status),
+                      _getDisplayStatusForTechnician(request), // 🆕
                       style: TextStyle(
                         color:
                             Color(ServiceStates.getStateColor(request.status)),
@@ -557,5 +567,24 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
         ),
       ],
     );
+  }
+
+  /// 🆕 Obtener estado apropiado para mostrar al técnico
+  /// Verifica si YO envié cotización
+  String _getDisplayStatusForTechnician(ServiceRequestModel request) {
+    // Si YO envié cotización
+    final iSentQuotation = _myQuotationsCache[request.id] ?? false;
+    
+    if (iSentQuotation) {
+      return '📤 Cotización Enviada';
+    }
+    
+    // Si otros enviaron pero yo no
+    if (request.status == 'quotation_sent') {
+      return '🟢 Disponible';
+    }
+    
+    // Otros estados
+    return ServiceStates.getDisplayName(request.status);
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
+import '../../data/models/profile_model.dart';
 
 class AdminDashboardPage extends StatefulWidget {
   const AdminDashboardPage({super.key});
@@ -13,6 +14,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   int _totalRequests = 0;
   int _activeRequests = 0;
   bool _isLoading = true;
+  List<ProfileModel> _pendingTechnicians = [];
 
   @override
   void initState() {
@@ -31,6 +33,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       
       setState(() {
         _pendingVerifications = pending.length;
+        _pendingTechnicians = pending;
         _isLoading = false;
       });
     } catch (e) {
@@ -102,6 +105,106 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       ),
                     ],
                   ),
+                  
+                  // 🆕 SECCIÓN DE TÉCNICOS PENDIENTES
+                  const SizedBox(height: 32),
+                  Text(
+                    'Técnicos Pendientes de Aprobación',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  if (_pendingTechnicians.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Center(
+                        child: Text(
+                          'No hay técnicos pendientes de aprobación',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _pendingTechnicians.length,
+                      itemBuilder: (context, index) {
+                        final technician = _pendingTechnicians[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.orange,
+                              child: Text(
+                                technician.fullName[0].toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              technician.fullName,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                Text(technician.email),
+                                const SizedBox(height: 4),
+                                Text('Teléfono: ${technician.phone ?? "No proporcionado"}'),
+                                
+                                // 🆕 MOSTRAR ESPECIALIDADES
+                                if (technician.specialties != null && 
+                                    technician.specialties!.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  const Row(
+                                    children: [
+                                      Icon(Icons.work_outline, size: 14, color: Colors.orange),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Especialidades:',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    spacing: 4,
+                                    runSpacing: 4,
+                                    children: technician.specialties!.map((specialty) {
+                                      return Chip(
+                                        label: Text(
+                                          specialty,
+                                          style: const TextStyle(fontSize: 11),
+                                        ),
+                                        backgroundColor: Colors.orange.shade100,
+                                        labelStyle: TextStyle(
+                                          color: Colors.orange.shade900,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),

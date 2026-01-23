@@ -10,6 +10,7 @@ abstract class AuthRepository {
     required String fullName,
     required String role,
     String? phone,
+    List<String>? specialties, // 🆕 AGREGAR
   });
 
   /// Iniciar sesión

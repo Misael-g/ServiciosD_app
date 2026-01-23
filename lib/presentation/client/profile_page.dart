@@ -151,33 +151,6 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                     },
                   ),
                   const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.history),
-                    title: const Text('Historial de Servicios'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      // TODO: Ver historial
-                    },
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.settings),
-                    title: const Text('Configuración'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      // TODO: Configuración
-                    },
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.help_outline),
-                    title: const Text('Ayuda'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      // TODO: Ayuda
-                    },
-                  ),
-                  const Divider(),
                   const SizedBox(height: 24),
                   OutlinedButton.icon(
                     onPressed: _handleLogout,

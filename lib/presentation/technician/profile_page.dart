@@ -218,36 +218,6 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage> {
                     },
                   ),
                   const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.location_on),
-                    title: const Text('Actualizar Ubicación'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () async {
-                      if (_profile != null) {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                TechnicianEditProfilePage(profile: _profile!),
-                          ),
-                        );
-
-                        if (result == true) {
-                          _loadProfile();
-                        }
-                      }
-                    },
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.settings),
-                    title: const Text('Configuración'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      SnackbarHelper.showInfo(context, 'Por implementar');
-                    },
-                  ),
-                  const Divider(),
                   const SizedBox(height: 24),
                   OutlinedButton.icon(
                     onPressed: _handleLogout,
