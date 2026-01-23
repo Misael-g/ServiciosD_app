@@ -8,8 +8,9 @@ import '../../data/models/service_request_model.dart';
 import '../../data/models/profile_model.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/config/supabase_config.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/custom_widgets.dart';
 
-/// Pantalla para ver mis cotizaciones enviadas (Técnico)
 class MyQuotationsPage extends StatefulWidget {
   const MyQuotationsPage({super.key});
 
@@ -17,7 +18,8 @@ class MyQuotationsPage extends StatefulWidget {
   State<MyQuotationsPage> createState() => _MyQuotationsPageState();
 }
 
-class _MyQuotationsPageState extends State<MyQuotationsPage> {
+class _MyQuotationsPageState extends State<MyQuotationsPage> 
+    with SingleTickerProviderStateMixin {
   final QuotationsRemoteDataSource _quotationsDS = QuotationsRemoteDataSource();
   final ServiceRequestsRemoteDataSource _requestsDS = ServiceRequestsRemoteDataSource();
   final ProfilesRemoteDataSource _profilesDS = ProfilesRemoteDataSource();
@@ -27,12 +29,23 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
   Map<String, ProfileModel> _clients = {};
   bool _isLoading = true;
   String _filterStatus = 'all';
+  late AnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
     timeago.setLocaleMessages('es', timeago.EsMessages());
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     _loadMyQuotations();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadMyQuotations() async {
@@ -44,12 +57,7 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
         throw Exception('No hay técnico autenticado');
       }
 
-      print('🔵 [MY_QUOTATIONS] Cargando cotizaciones del técnico: $technicianId');
-
       final quotations = await _quotationsDS.getQuotationsByTechnician(technicianId);
-
-      print('✅ [MY_QUOTATIONS] ${quotations.length} cotizaciones encontradas');
-
       final requests = <String, ServiceRequestModel>{};
       final clients = <String, ProfileModel>{};
 
@@ -64,7 +72,7 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
               clients[request.clientId] = client;
             }
           } catch (e) {
-            print('⚠️ Error cargando solicitud ${quotation.serviceRequestId}: $e');
+            print('⚠️ Error cargando solicitud: $e');
           }
         }
       }
@@ -75,8 +83,9 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
         _clients = clients;
         _isLoading = false;
       });
+
+      _animationController.forward();
     } catch (e) {
-      print('❌ [MY_QUOTATIONS] Error: $e');
       if (mounted) {
         setState(() => _isLoading = false);
         SnackbarHelper.showError(context, 'Error al cargar cotizaciones');
@@ -88,10 +97,18 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Completar Trabajo'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: AppColors.success, size: 28),
+            SizedBox(width: 12),
+            Text('Completar Trabajo'),
+          ],
+        ),
         content: const Text(
-          '¿Confirmas que has completado este trabajo?\n\n'
-          'El cliente podrá verificar y dejar una reseña.',
+          '¿Confirmas que has completado este trabajo?\n\nEl cliente podrá verificar y dejar una reseña.',
         ),
         actions: [
           TextButton(
@@ -101,7 +118,7 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.success,
             ),
             child: const Text('Completar'),
           ),
@@ -112,11 +129,7 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
     if (confirm != true) return;
 
     try {
-      print('📤 [MY_QUOTATIONS] Completando trabajo: ${request.id}');
-
       await _requestsDS.completeService(request.id);
-
-      print('✅ [MY_QUOTATIONS] Trabajo marcado como completado');
 
       if (mounted) {
         SnackbarHelper.showSuccess(
@@ -126,7 +139,6 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
         _loadMyQuotations();
       }
     } catch (e) {
-      print('❌ [MY_QUOTATIONS] Error al completar: $e');
       if (mounted) {
         SnackbarHelper.showError(context, 'Error al completar trabajo');
       }
@@ -141,104 +153,157 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mis Cotizaciones'),
-        backgroundColor: Colors.orange,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _quotations.isEmpty
-              ? _buildEmptyState()
-              : Column(
-                  children: [
-                    _buildFilterChips(),
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _filteredQuotations.length,
-                        itemBuilder: (context, index) {
-                          final quotation = _filteredQuotations[index];
-                          final request = _requests[quotation.serviceRequestId];
-                          final client = request != null ? _clients[request.clientId] : null;
+      backgroundColor: AppColors.background,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // AppBar
+          SliverAppBar(
+            expandedHeight: 120,
+            floating: false,
+            pinned: true,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.warning,
+                      AppColors.warning.withOpacity(0.8),
+                    ],
+                  ),
+                ),
+              ),
+              title: const Text(
+                'Mis Cotizaciones',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              centerTitle: true,
+            ),
+          ),
 
-                          return _buildQuotationCard(quotation, request, client);
-                        },
+          // Filtros
+          SliverToBoxAdapter(
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
+                boxShadow: AppShadows.small,
+              ),
+              child: Row(
+                children: [
+                  _buildFilterChip('Todas', 'all', _quotations.length),
+                  _buildFilterChip(
+                    'Pendientes',
+                    'pending',
+                    _quotations.where((q) => q.status == 'pending').length,
+                  ),
+                  _buildFilterChip(
+                    'Aceptadas',
+                    'accepted',
+                    _quotations.where((q) => q.status == 'accepted').length,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Lista
+          _isLoading
+              ? const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              : _filteredQuotations.isEmpty
+                  ? SliverFillRemaining(
+                      child: EmptyState(
+                        icon: Icons.receipt_long_rounded,
+                        title: 'No hay cotizaciones',
+                        message: _filterStatus == 'all'
+                            ? 'Aún no has enviado cotizaciones'
+                            : 'No tienes cotizaciones en esta categoría',
+                      ),
+                    )
+                  : SliverPadding(
+                      padding: const EdgeInsets.all(16),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final quotation = _filteredQuotations[index];
+                            final request = _requests[quotation.serviceRequestId];
+                            final client = request != null ? _clients[request.clientId] : null;
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: FadeTransition(
+                                opacity: _animationController,
+                                child: _buildQuotationCard(quotation, request, client),
+                              ),
+                            );
+                          },
+                          childCount: _filteredQuotations.length,
+                        ),
                       ),
                     ),
-                  ],
-                ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.receipt_long, size: 80, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'No has enviado cotizaciones',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Busca solicitudes y envía tus propuestas',
-            style: TextStyle(color: Colors.grey[500]),
-          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChips() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _buildFilterChip('Todas', 'all', _quotations.length),
-            const SizedBox(width: 8),
-            _buildFilterChip(
-              'Pendientes',
-              'pending',
-              _quotations.where((q) => q.status == 'pending').length,
-            ),
-            const SizedBox(width: 8),
-            _buildFilterChip(
-              'Aceptadas',
-              'accepted',
-              _quotations.where((q) => q.status == 'accepted').length,
-            ),
-            const SizedBox(width: 8),
-            _buildFilterChip(
-              'Rechazadas',
-              'rejected',
-              _quotations.where((q) => q.status == 'rejected').length,
-            ),
-          ],
-        ),
       ),
     );
   }
 
   Widget _buildFilterChip(String label, String value, int count) {
     final isSelected = _filterStatus == value;
-    return FilterChip(
-      label: Text('$label ($count)'),
-      selected: isSelected,
-      onSelected: (selected) {
-        if (selected) {
-          setState(() => _filterStatus = value);
-        }
-      },
-      selectedColor: Colors.orange.shade100,
-      checkmarkColor: Colors.orange,
+
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _filterStatus = value;
+          });
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            gradient: isSelected
+                ? LinearGradient(
+                    colors: [
+                      AppColors.warning,
+                      AppColors.warning.withOpacity(0.8),
+                    ],
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? AppColors.white : AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                count.toString(),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? AppColors.white : AppColors.warning,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -248,10 +313,10 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
     ProfileModel? client,
   ) {
     if (request == null) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('Error al cargar solicitud'),
+      return Card(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: const Text('Error al cargar solicitud'),
         ),
       );
     }
@@ -260,79 +325,70 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
     final isAccepted = quotation.status == 'accepted';
     final isRejected = quotation.status == 'rejected';
     final isCompleted = request.status == 'completed' || request.status == 'rated';
-    
-    // ✅ LÓGICA CORRECTA: El técnico puede completar si:
-    // 1. La cotización fue aceptada
-    // 2. El servicio está en 'quotation_accepted' o 'in_progress'
-    // 3. No está ya completado
-    final canComplete = isAccepted && 
-                       (request.status == 'quotation_accepted' || request.status == 'in_progress') &&
-                       !isCompleted;
 
-    Color statusColor = Colors.grey;
-    IconData statusIcon = Icons.hourglass_empty;
-    String statusText = quotation.status;
+    final canComplete = isAccepted &&
+        (request.status == 'quotation_accepted' || request.status == 'in_progress') &&
+        !isCompleted;
 
-    if (isPending) {
-      statusColor = Colors.orange;
-      statusIcon = Icons.hourglass_empty;
-      statusText = 'Pendiente';
-    } else if (isAccepted) {
+    Color statusColor = AppColors.warning;
+    IconData statusIcon = Icons.hourglass_empty_rounded;
+    String statusText = 'Pendiente';
+
+    if (isAccepted) {
       if (isCompleted) {
-        statusColor = Colors.blue;
-        statusIcon = Icons.done_all;
+        statusColor = AppColors.info;
+        statusIcon = Icons.done_all_rounded;
         statusText = 'Completada';
       } else {
-        statusColor = Colors.green;
-        statusIcon = Icons.check_circle;
+        statusColor = AppColors.success;
+        statusIcon = Icons.check_circle_rounded;
         statusText = 'Aceptada';
       }
     } else if (isRejected) {
-      statusColor = Colors.red;
-      statusIcon = Icons.cancel;
+      statusColor = AppColors.error;
+      statusIcon = Icons.cancel_rounded;
       statusText = 'Rechazada';
     }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: statusColor.withValues(alpha: 0.3),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: statusColor.withOpacity(0.3),
           width: 2,
         ),
+        boxShadow: AppShadows.small,
       ),
       child: Column(
         children: [
-          // Header con estado
+          // Header
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
+              color: statusColor.withOpacity(0.1),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
               ),
             ),
             child: Row(
               children: [
-                Icon(statusIcon, color: statusColor, size: 20),
-                const SizedBox(width: 8),
+                Icon(statusIcon, color: statusColor, size: 24),
+                const SizedBox(width: 12),
                 Text(
                   statusText.toUpperCase(),
                   style: TextStyle(
                     color: statusColor,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
                 ),
                 const Spacer(),
                 Text(
                   timeago.format(quotation.createdAt, locale: 'es'),
-                  style: TextStyle(
-                    color: Colors.grey[600],
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -340,45 +396,42 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
             ),
           ),
 
+          // Contenido
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Info de la solicitud
+                // Solicitud
                 Text(
                   request.title,
                   style: const TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text(
                   request.description,
-                  style: TextStyle(color: Colors.grey[600]),
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
-                // Info del cliente
+                // Cliente
                 if (client != null)
                   Row(
                     children: [
-                      CircleAvatar(
+                      ProfileAvatar(
+                        name: client.fullName,
+                        imageUrl: client.profilePictureUrl,
                         radius: 20,
-                        backgroundColor: Colors.blue,
-                        backgroundImage: client.profilePictureUrl != null
-                            ? NetworkImage(client.profilePictureUrl!)
-                            : null,
-                        child: client.profilePictureUrl == null
-                            ? Text(
-                                client.fullName[0].toUpperCase(),
-                                style: const TextStyle(color: Colors.white),
-                              )
-                            : null,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -388,15 +441,16 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
                             Text(
                               client.fullName,
                               style: const TextStyle(
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
                               ),
                             ),
                             if (client.phone != null)
                               Text(
                                 client.phone!,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey[600],
+                                  color: AppColors.textSecondary,
                                 ),
                               ),
                           ],
@@ -405,14 +459,19 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
                     ],
                   ),
 
-                const Divider(height: 24),
+                const SizedBox(height: 16),
 
-                // Desglose de precio
+                // Precio
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(8),
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.success.withOpacity(0.15),
+                        AppColors.success.withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     children: [
@@ -427,16 +486,17 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
                           const Text(
                             'TOTAL',
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w700,
                               fontSize: 16,
                             ),
                           ),
                           Text(
                             '\$${quotation.estimatedPrice.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              color: Colors.green.shade700,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 24,
+                              color: AppColors.success,
+                              letterSpacing: -0.5,
                             ),
                           ),
                         ],
@@ -450,153 +510,58 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
                 // Tiempo
                 Row(
                   children: [
-                    Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
+                    const Icon(Icons.schedule_rounded, size: 16, color: AppColors.textSecondary),
                     const SizedBox(width: 4),
                     Text(
                       '${quotation.estimatedDuration} min',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
-                    const SizedBox(width: 16),
-                    if (quotation.estimatedArrivalTime != null) ...[
-                      Icon(Icons.delivery_dining, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
-                      Text(
-                        _formatArrivalTime(quotation.estimatedArrivalTime!),
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
                   ],
                 ),
 
-                // Descripción
-                if (quotation.description.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    quotation.description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                ],
-
-                // ✅ BOTÓN DE COMPLETAR - Solo si puede completar
+                // Botón completar
                 if (canComplete) ...[
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () => _completeWork(request),
-                      icon: const Icon(Icons.check_circle),
+                      icon: const Icon(Icons.check_circle_rounded),
                       label: const Text('Marcar como Completado'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
+                        backgroundColor: AppColors.success,
+                        foregroundColor: AppColors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
                   ),
                 ],
 
-                // Mensajes de estado
+                // Estados informativos
                 if (isCompleted) ...[
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.done_all, color: Colors.blue),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Trabajo completado. Esperando reseña del cliente.',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
+                  InfoCard(
+                    message: 'Trabajo completado. Esperando reseña del cliente.',
+                    icon: Icons.done_all_rounded,
+                    color: AppColors.info,
                   ),
                 ],
 
                 if (isRejected) ...[
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade200),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.info_outline, color: Colors.red, size: 20),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'El cliente eligió otra cotización',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  InfoCard(
+                    message: 'El cliente eligió otra cotización',
+                    icon: Icons.info_outline_rounded,
+                    color: AppColors.error,
                   ),
                 ],
 
                 if (isPending) ...[
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.shade200),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.hourglass_empty, color: Colors.orange, size: 20),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Esperando respuesta del cliente',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                if (isAccepted && !isCompleted) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            request.status == 'in_progress'
-                                ? 'Trabajo en progreso. Márcalo como completado cuando termines.'
-                                : '¡Cotización aceptada! Dirígete al lugar y comienza el trabajo.',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
+                  InfoCard(
+                    message: 'Esperando respuesta del cliente',
+                    icon: Icons.hourglass_empty_rounded,
+                    color: AppColors.warning,
                   ),
                 ],
               ],
@@ -621,12 +586,5 @@ class _MyQuotationsPageState extends State<MyQuotationsPage> {
         ],
       ),
     );
-  }
-
-  String _formatArrivalTime(int hours) {
-    if (hours == 0) return '30 min';
-    if (hours == 1) return '1 hora';
-    if (hours < 24) return '$hours horas';
-    return 'Mañana';
   }
 }
