@@ -9,6 +9,8 @@ import '../../data/models/quotation_model.dart';
 import '../../data/models/profile_model.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/constants/service_states.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/custom_widgets.dart';
 import 'leave_review_page.dart';
 
 /// Pantalla de detalle completo de solicitud (Cliente)
@@ -24,7 +26,8 @@ class RequestDetailPage extends StatefulWidget {
   State<RequestDetailPage> createState() => _RequestDetailPageState();
 }
 
-class _RequestDetailPageState extends State<RequestDetailPage> {
+class _RequestDetailPageState extends State<RequestDetailPage> 
+    with SingleTickerProviderStateMixin {
   final ServiceRequestsRemoteDataSource _requestsDS =
       ServiceRequestsRemoteDataSource();
   final QuotationsRemoteDataSource _quotationsDS =
@@ -36,11 +39,22 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
   List<QuotationModel> _quotations = [];
   ProfileModel? _assignedTechnician;
   bool _isLoading = true;
+  late AnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -63,6 +77,8 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
         _assignedTechnician = technician;
         _isLoading = false;
       });
+
+      _animationController.forward();
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -75,9 +91,52 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Aceptar Cotización'),
-        content: Text(
-          '¿Confirmas que deseas aceptar esta cotización de \$${quotation.estimatedPrice.toStringAsFixed(2)}?',
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: AppColors.success),
+            SizedBox(width: 12),
+            Text('Aceptar Cotización'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¿Confirmas que deseas aceptar esta cotización de \$${quotation.estimatedPrice.toStringAsFixed(2)}?',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Desglose:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (quotation.laborCost != null)
+                    _buildPriceRow('Mano de obra', quotation.laborCost!),
+                  if (quotation.materialsCost != null)
+                    _buildPriceRow('Materiales', quotation.materialsCost!),
+                  const Divider(height: 16),
+                  _buildPriceRow('TOTAL', quotation.estimatedPrice, isTotal: true),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -86,6 +145,9 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+            ),
             child: const Text('Aceptar'),
           ),
         ],
@@ -143,10 +205,30 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Cancelar Solicitud'),
-        content: const Text(
-          '¿Estás seguro que deseas cancelar esta solicitud?\n\n'
-          'Esta acción no se puede deshacer.',
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.cancel_rounded, color: AppColors.error),
+            SizedBox(width: 12),
+            Text('Cancelar Solicitud'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '¿Estás seguro que deseas cancelar esta solicitud?',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 16),
+            InfoCard(
+              message: 'Esta acción no se puede deshacer',
+              icon: Icons.warning_rounded,
+              color: AppColors.error,
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -156,7 +238,7 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
             ),
             child: const Text('Sí, cancelar'),
           ),
@@ -189,100 +271,112 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Detalle de Solicitud'),
+        centerTitle: true,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadData,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _buildRequestInfo(),
-                  const SizedBox(height: 24),
-                  _buildStatusCard(),
-                  const SizedBox(height: 24),
-                  if (_assignedTechnician != null) ...[
-                    _buildTechnicianCard(),
-                    const SizedBox(height: 16),
-                    // Botón Dejar Reseña si está completado
-                    if (_request?.status == 'completed') ...[
-                      FutureBuilder<bool>(
-                        future: _reviewsDS.hasReviewForRequest(widget.requestId),
-                        builder: (context, snapshot) {
-                          final hasReview = snapshot.data ?? false;
-
-                          if (hasReview) {
-                            return Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.green),
-                              ),
-                              child: const Row(
-                                children: [
-                                  Icon(Icons.check_circle, color: Colors.green),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    '¡Gracias por tu reseña!',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-
-                          return ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => LeaveReviewPage(
-                                    serviceRequest: _request!,
-                                    technician: _assignedTechnician!,
+              child: FadeTransition(
+                opacity: _animationController,
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildRequestInfo(),
+                            const SizedBox(height: 16),
+                            _buildStatusCard(),
+                            const SizedBox(height: 16),
+                            if (_assignedTechnician != null) ...[
+                              _buildTechnicianCard(),
+                              const SizedBox(height: 16),
+                              // Botón Dejar Reseña
+                              if (_request?.status == 'completed')
+                                FutureBuilder<bool>(
+                                  future: _reviewsDS.hasReviewForRequest(widget.requestId),
+                                  builder: (context, snapshot) {
+                                    final hasReview = snapshot.data ?? false;
+                                    if (hasReview) {
+                                      return InfoCard(
+                                        message: '¡Gracias por tu reseña!',
+                                        icon: Icons.check_circle_rounded,
+                                        color: AppColors.success,
+                                      );
+                                    }
+                                    return SizedBox(
+                                      width: double.infinity,
+                                      height: 56,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => LeaveReviewPage(
+                                                serviceRequest: _request!,
+                                                technician: _assignedTechnician!,
+                                              ),
+                                            ),
+                                          ).then((_) => _loadData());
+                                        },
+                                        icon: const Icon(Icons.star_rounded),
+                                        label: const Text('Dejar Reseña'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.warning,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                            ],
+                            // Botón cancelar
+                            if (_request!.status == 'pending' || 
+                                _request!.status == 'quotation_sent') ...[
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 56,
+                                child: OutlinedButton.icon(
+                                  onPressed: _cancelRequest,
+                                  icon: const Icon(Icons.cancel_rounded),
+                                  label: const Text('Cancelar Solicitud'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.error,
+                                    side: const BorderSide(color: AppColors.error),
                                   ),
                                 ),
-                              ).then((_) => _loadData());
-                            },
-                            icon: const Icon(Icons.star),
-                            label: const Text('Dejar Reseña'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              foregroundColor: Colors.white,
-                            ),
-                          );
-                        },
-                      ),
-                    ] else
-                      const SizedBox(height: 24),
-                  ],
-                  // Solo si puede cancelar
-                  if (_request!.status == 'pending' || 
-                      _request!.status == 'quotation_sent') ...[const SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      onPressed: _cancelRequest,
-                      icon: const Icon(Icons.cancel),
-                      label: const Text('Cancelar Solicitud'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
+                              ),
+                            ],
+                            if (_quotations.isNotEmpty) ...[
+                              const SizedBox(height: 24),
+                              const SectionHeader(
+                                title: 'Cotizaciones Recibidas',
+                                icon: Icons.receipt_long_rounded,
+                              ),
+                              const SizedBox(height: 16),
+                              ..._quotations.map((q) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _buildQuotationCard(q),
+                              )),
+                            ],
+                            if (_request?.images != null && 
+                                _request!.images!.isNotEmpty) ...[
+                              const SizedBox(height: 24),
+                              _buildImagesSection(),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
                   ],
-                  if (_quotations.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    _buildQuotationsSection(),
-                  ],
-                  if (_request?.images != null && _request!.images!.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    _buildImagesSection(),
-                  ],
-                ],
+                ),
               ),
             ),
     );
@@ -347,7 +441,7 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
     final color = Color(ServiceStates.getStateColor(status));
 
     return Card(
-      color: color.withOpacity(0.1),
+      color: color.withValues(alpha: 0.1),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -456,22 +550,6 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildQuotationsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Cotizaciones (${_quotations.length})',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 12),
-        ..._quotations.map((quotation) => _buildQuotationCard(quotation)),
-      ],
     );
   }
 
@@ -729,4 +807,30 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
       return '${date.day}/${date.month}/${date.year}';
     }
   }
+}
+
+Widget _buildPriceRow(String label, double amount, {bool isTotal = false}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: isTotal ? FontWeight.w700 : FontWeight.w500,
+            fontSize: isTotal ? 16 : 14,
+          ),
+        ),
+        Text(
+          '\$${amount.toStringAsFixed(2)}',
+          style: TextStyle(
+            fontWeight: isTotal ? FontWeight.w700 : FontWeight.w500,
+            fontSize: isTotal ? 16 : 14,
+            color: isTotal ? AppColors.success : AppColors.textPrimary,
+          ),
+        ),
+      ],
+    ),
+  );
 }

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../data/datasources/storage_remote_ds.dart';
-import '../../data/datasources/profiles_remote_ds.dart';
 import '../../data/models/profile_model.dart';
 import '../../core/utils/snackbar_helper.dart';
 
@@ -95,7 +94,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
     try {
       SnackbarHelper.showLoading(context, 'Subiendo imagen...');
 
-      final url = await _storageDS.uploadPortfolioImage(
+      await _storageDS.uploadPortfolioImage(
         technicianId: widget.technician.id,
         file: file,
       );
@@ -332,7 +331,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
               right: 4,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(

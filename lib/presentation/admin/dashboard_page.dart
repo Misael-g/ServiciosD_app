@@ -79,7 +79,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       borderRadius: BorderRadius.circular(AppBorderRadius.lg),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.3),
+                          color: AppColors.primary.withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -301,7 +301,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
+                                  color: AppColors.primary.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(

@@ -164,13 +164,13 @@ class _RegisterPageState extends State<RegisterPage> {
                       gradient: LinearGradient(
                         colors: _selectedRole == UserRoles.client
                             ? [Colors.blue.shade50, Colors.blue.shade100]
-                            : [AppColors.primary.withOpacity(0.1), AppColors.primary.withOpacity(0.2)],
+                            : [AppColors.primary.withValues(alpha: 0.1), AppColors.primary.withValues(alpha: 0.2)],
                       ),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: _selectedRole == UserRoles.client
                             ? Colors.blue.shade200
-                            : AppColors.primary.withOpacity(0.3),
+                            : AppColors.primary.withValues(alpha: 0.3),
                         width: 1.5,
                       ),
                     ),
@@ -365,10 +365,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.08),
+                      color: AppColors.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColors.primary.withOpacity(0.3),
+                        color: AppColors.primary.withValues(alpha: 0.3),
                         width: 1.5,
                       ),
                     ),
@@ -440,7 +440,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 });
                               },
                         backgroundColor: AppColors.white,
-                        selectedColor: AppColors.primary.withOpacity(0.15),
+                        selectedColor: AppColors.primary.withValues(alpha: 0.15),
                         checkmarkColor: AppColors.primary,
                         side: BorderSide(
                           color: isSelected
@@ -466,10 +466,10 @@ class _RegisterPageState extends State<RegisterPage> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.1),
+                        color: AppColors.success.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: AppColors.success.withOpacity(0.3),
+                          color: AppColors.success.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(
@@ -503,10 +503,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.info.withOpacity(0.08),
+                      color: AppColors.info.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColors.info.withOpacity(0.2),
+                        color: AppColors.info.withValues(alpha: 0.2),
                       ),
                     ),
                     child: Column(

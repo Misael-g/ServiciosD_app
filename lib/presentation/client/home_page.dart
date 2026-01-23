@@ -10,7 +10,6 @@ import '../../core/widgets/custom_widgets.dart';
 import 'create_request_page.dart';
 import 'request_detail_page.dart';
 
-/// Página principal del cliente con saludo personalizado
 class ClientHomePage extends StatefulWidget {
   const ClientHomePage({super.key});
 
@@ -18,7 +17,7 @@ class ClientHomePage extends StatefulWidget {
   State<ClientHomePage> createState() => _ClientHomePageState();
 }
 
-class _ClientHomePageState extends State<ClientHomePage> {
+class _ClientHomePageState extends State<ClientHomePage> with SingleTickerProviderStateMixin {
   final ServiceRequestsRemoteDataSource _serviceRequestsDataSource =
       ServiceRequestsRemoteDataSource();
   final ProfilesRemoteDataSource _profilesDataSource =
@@ -27,18 +26,33 @@ class _ClientHomePageState extends State<ClientHomePage> {
   List<ServiceRequestModel> _activeRequests = [];
   ProfileModel? _profile;
   bool _isLoading = true;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
     try {
-      // Cargar perfil y solicitudes en paralelo
       final results = await Future.wait([
         _profilesDataSource.getCurrentUserProfile(),
         _serviceRequestsDataSource.getMyServiceRequests(),
@@ -47,7 +61,6 @@ class _ClientHomePageState extends State<ClientHomePage> {
       final profile = results[0] as ProfileModel;
       final requests = results[1] as List<ServiceRequestModel>;
 
-      // Filtrar solo solicitudes activas
       final activeRequests = requests
           .where((r) =>
               r.status != 'completed' &&
@@ -60,6 +73,8 @@ class _ClientHomePageState extends State<ClientHomePage> {
         _activeRequests = activeRequests;
         _isLoading = false;
       });
+
+      _animationController.forward();
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -70,13 +85,9 @@ class _ClientHomePageState extends State<ClientHomePage> {
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) {
-      return '¡Buenos días';
-    } else if (hour < 19) {
-      return '¡Buenas tardes';
-    } else {
-      return '¡Buenas noches';
-    }
+    if (hour < 12) return '¡Buenos días';
+    if (hour < 19) return '¡Buenas tardes';
+    return '¡Buenas noches';
   }
 
   String _getFirstName() {
@@ -89,46 +100,149 @@ class _ClientHomePageState extends State<ClientHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        title: const Text('TecniHogar'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              SnackbarHelper.showInfo(
-                  context, 'Notificaciones - Por implementar');
-            },
-          ),
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadData,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // ��� Tarjeta de bienvenida moderna
-                  _buildWelcomeCard(),
-                  const SizedBox(height: 24),
-
-                  // ��� Sección de servicios
-                  const SectionHeader(
-                    title: '¿Qué servicio necesitas?',
-                    icon: Icons.build_outlined,
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // App Bar Expandible
+                  SliverAppBar(
+                    expandedHeight: 200,
+                    floating: false,
+                    pinned: true,
+                    backgroundColor: AppColors.primary,
+                    flexibleSpace: FlexibleSpaceBar(
+                      background: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppColors.primary,
+                              AppColors.primaryDark,
+                            ],
+                          ),
+                        ),
+                        child: SafeArea(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                FadeTransition(
+                                  opacity: _fadeAnimation,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(3),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: AppColors.white,
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: ProfileAvatar(
+                                          name: _profile?.fullName ?? '?',
+                                          imageUrl: _profile?.profilePictureUrl,
+                                          radius: 28,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${_getGreeting()},',
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                color: AppColors.white,
+                                                fontWeight: FontWeight.w400,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              _getFirstName(),
+                                              style: const TextStyle(
+                                                fontSize: 28,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.white,
+                                                letterSpacing: -0.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    actions: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications_outlined),
+                        onPressed: () {
+                          SnackbarHelper.showInfo(
+                              context, 'Notificaciones - Por implementar');
+                        },
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  _buildServicesGrid(),
-                  const SizedBox(height: 32),
 
-                  // ��� Solicitudes activas
-                  SectionHeader(
-                    title: 'Solicitudes Activas',
-                    subtitle: '${_activeRequests.length} en progreso',
+                  // Contenido
+                  SliverToBoxAdapter(
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Quick Stats
+                            _buildQuickStats(),
+                            const SizedBox(height: 32),
+
+                            // Servicios
+                            const SectionHeader(
+                              title: '¿Qué servicio necesitas?',
+                              icon: Icons.home_repair_service_rounded,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildServicesGrid(),
+                            const SizedBox(height: 32),
+
+                            // Solicitudes activas
+                            SectionHeader(
+                              title: 'Solicitudes Activas',
+                              subtitle: _activeRequests.isEmpty
+                                  ? 'No tienes solicitudes activas'
+                                  : '${_activeRequests.length} en progreso',
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  _buildActiveRequestsList(),
+
+                  // Lista de solicitudes activas
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: _buildActiveRequestsList(),
+                  ),
+
+                  // Espacio al final
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 100),
+                  ),
                 ],
               ),
             ),
@@ -145,65 +259,97 @@ class _ClientHomePageState extends State<ClientHomePage> {
             _loadData();
           }
         },
-        icon: const Icon(Icons.add),
-        label: const Text('Nueva Solicitud'),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text(
+          'Nueva Solicitud',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        elevation: 4,
       ),
     );
   }
 
-  Widget _buildWelcomeCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary,
-            AppColors.primaryDark,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget _buildQuickStats() {
+    final totalRequests = _activeRequests.length;
+    final pendingQuotations = _activeRequests
+        .where((r) => r.status == 'quotation_sent')
+        .length;
+    final inProgress = _activeRequests
+        .where((r) => r.status == 'in_progress')
+        .length;
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCard(
+            'Activas',
+            totalRequests.toString(),
+            Icons.assignment_outlined,
+            AppColors.info,
+          ),
         ),
-        borderRadius: BorderRadius.circular(AppBorderRadius.lg),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildStatCard(
+            'Cotizaciones',
+            pendingQuotations.toString(),
+            Icons.request_quote_outlined,
+            AppColors.warning,
           ),
-        ],
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildStatCard(
+            'En Progreso',
+            inProgress.toString(),
+            Icons.build_circle_outlined,
+            AppColors.success,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppShadows.small,
       ),
-      child: Row(
+      child: Column(
         children: [
-          const Icon(
-            Icons.waving_hand,
-            size: 40,
-            color: AppColors.white,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${_getGreeting()}, ${_getFirstName()}!',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.white,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  '¿Qué servicio necesitas hoy?',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Icon(icon, size: 24, color: color),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: color,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -214,29 +360,39 @@ class _ClientHomePageState extends State<ClientHomePage> {
     final services = [
       {
         'name': 'Electricista',
-        'icon': Icons.electrical_services,
-        'color': AppColors.warning
+        'icon': Icons.electrical_services_rounded,
+        'color': const Color(0xFFFFA726),
+        'gradient': [const Color(0xFFFFA726), const Color(0xFFFF8A65)]
       },
-      {'name': 'Plomero', 'icon': Icons.plumbing, 'color': AppColors.info},
+      {
+        'name': 'Plomero',
+        'icon': Icons.plumbing_rounded,
+        'color': const Color(0xFF42A5F5),
+        'gradient': [const Color(0xFF42A5F5), const Color(0xFF1E88E5)]
+      },
       {
         'name': 'Carpintero',
-        'icon': Icons.carpenter,
-        'color': const Color(0xFF8B4513)
+        'icon': Icons.carpenter_rounded,
+        'color': const Color(0xFF8D6E63),
+        'gradient': [const Color(0xFF8D6E63), const Color(0xFF6D4C41)]
       },
       {
         'name': 'Pintor',
-        'icon': Icons.format_paint,
-        'color': const Color(0xFF9B59B6)
+        'icon': Icons.format_paint_rounded,
+        'color': const Color(0xFFAB47BC),
+        'gradient': [const Color(0xFFAB47BC), const Color(0xFF8E24AA)]
       },
       {
         'name': 'Mecánico',
-        'icon': Icons.build,
-        'color': AppColors.secondary
+        'icon': Icons.build_circle_rounded,
+        'color': const Color(0xFF26A69A),
+        'gradient': [const Color(0xFF26A69A), const Color(0xFF00897B)]
       },
       {
         'name': 'Otros',
-        'icon': Icons.more_horiz,
-        'color': AppColors.success
+        'icon': Icons.more_horiz_rounded,
+        'color': const Color(0xFF66BB6A),
+        'gradient': [const Color(0xFF66BB6A), const Color(0xFF43A047)]
       },
     ];
 
@@ -247,7 +403,7 @@ class _ClientHomePageState extends State<ClientHomePage> {
         crossAxisCount: 3,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1,
+        childAspectRatio: 0.95,
       ),
       itemCount: services.length,
       itemBuilder: (context, index) {
@@ -255,13 +411,13 @@ class _ClientHomePageState extends State<ClientHomePage> {
         return _buildServiceCard(
           service['name'] as String,
           service['icon'] as IconData,
-          service['color'] as Color,
+          service['gradient'] as List<Color>,
         );
       },
     );
   }
 
-  Widget _buildServiceCard(String name, IconData icon, Color color) {
+  Widget _buildServiceCard(String name, IconData icon, List<Color> gradient) {
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -275,33 +431,38 @@ class _ClientHomePageState extends State<ClientHomePage> {
           }
         });
       },
-      borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(AppBorderRadius.lg),
-          border: Border.all(color: AppColors.border),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradient,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: gradient[0].withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, size: 28, color: color),
-            ),
+            Icon(icon, size: 36, color: AppColors.white),
             const SizedBox(height: 8),
             Text(
               name,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: AppColors.white,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -311,25 +472,48 @@ class _ClientHomePageState extends State<ClientHomePage> {
 
   Widget _buildActiveRequestsList() {
     if (_activeRequests.isEmpty) {
-      return const EmptyState(
-        icon: Icons.inbox_outlined,
-        title: 'No tienes solicitudes activas',
-        message: 'Crea una nueva solicitud para comenzar',
+      return SliverToBoxAdapter(
+        child: EmptyState(
+          icon: Icons.inbox_outlined,
+          title: 'No tienes solicitudes activas',
+          message: 'Crea una nueva solicitud para comenzar',
+          action: ElevatedButton.icon(
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const CreateRequestPage(),
+                ),
+              );
+
+              if (result == true) {
+                _loadData();
+              }
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Crear Solicitud'),
+          ),
+        ),
       );
     }
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _activeRequests.length,
-      itemBuilder: (context, index) {
-        final request = _activeRequests[index];
-        return _buildRequestCard(request);
-      },
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final request = _activeRequests[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildRequestCard(request),
+          );
+        },
+        childCount: _activeRequests.length,
+      ),
     );
   }
 
   Widget _buildRequestCard(ServiceRequestModel request) {
+    final statusColor = Color(ServiceStates.getStateColor(request.status));
+
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -339,68 +523,116 @@ class _ClientHomePageState extends State<ClientHomePage> {
           ),
         ).then((_) => _loadData());
       },
-      borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.white,
-          borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.border),
+          boxShadow: AppShadows.small,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    request.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      color: AppColors.textPrimary,
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.08),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.assignment_outlined,
+                      color: statusColor,
+                      size: 20,
                     ),
                   ),
-                ),
-                StatusBadge(
-                  label: ServiceStates.getDisplayName(request.status),
-                  color: Color(ServiceStates.getStateColor(request.status)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              request.description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      request.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  StatusBadge(
+                    label: ServiceStates.getDisplayName(request.status),
+                    color: statusColor,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    request.serviceType,
+
+            // Contenido
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    request.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                      height: 1.4,
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                LocationBadge(location: request.address),
-              ],
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.build_circle_outlined,
+                              size: 14,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              request.serviceType,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: LocationBadge(location: request.address),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),

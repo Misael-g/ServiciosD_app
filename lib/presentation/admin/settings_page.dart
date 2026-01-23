@@ -141,7 +141,7 @@ class AdminSettingsPage extends StatelessWidget {
               color: AppColors.white,
               borderRadius: BorderRadius.circular(AppBorderRadius.md),
               border: Border.all(
-                color: AppColors.error.withOpacity(0.3),
+                color: AppColors.error.withValues(alpha: 0.3),
                 width: 1.5,
               ),
             ),
@@ -150,7 +150,7 @@ class AdminSettingsPage extends StatelessWidget {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.error.withOpacity(0.1),
+                  color: AppColors.error.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -198,7 +198,7 @@ class AdminSettingsPage extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
+            color: AppColors.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(

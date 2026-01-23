@@ -270,10 +270,10 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
                                       vertical: 8,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary.withOpacity(0.1),
+                                      color: AppColors.primary.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
-                                        color: AppColors.primary.withOpacity(0.3),
+                                        color: AppColors.primary.withValues(alpha: 0.3),
                                       ),
                                     ),
                                     child: Row(
@@ -427,8 +427,8 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: url != null
-                            ? AppColors.success.withOpacity(0.1)
-                            : AppColors.error.withOpacity(0.1),
+                            ? AppColors.success.withValues(alpha: 0.1)
+                            : AppColors.error.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -499,7 +499,7 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
                       Icon(
                         Icons.file_present,
                         size: 48,
-                        color: AppColors.textSecondary.withOpacity(0.5),
+                        color: AppColors.textSecondary.withValues(alpha: 0.5),
                       ),
                       const SizedBox(height: 8),
                       const Text(

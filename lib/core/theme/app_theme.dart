@@ -38,12 +38,10 @@ class AppTheme {
       primary: AppColors.primary,
       secondary: AppColors.secondary,
       surface: AppColors.white,
-      background: AppColors.background,
       error: AppColors.error,
       onPrimary: AppColors.white,
       onSecondary: AppColors.white,
       onSurface: AppColors.textPrimary,
-      onBackground: AppColors.textPrimary,
     ),
     
     // AppBar
@@ -158,7 +156,7 @@ class AppTheme {
     // Chip
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.background,
-      selectedColor: AppColors.primary.withOpacity(0.15),
+      selectedColor: AppColors.primary.withValues(alpha: 0.15),
       secondarySelectedColor: AppColors.primary,
       labelStyle: const TextStyle(
         color: AppColors.textPrimary,
@@ -319,7 +317,7 @@ class AppBorderRadius {
 class AppShadows {
   static List<BoxShadow> get small => [
     BoxShadow(
-      color: AppColors.black.withOpacity(0.04),
+      color: AppColors.black.withValues(alpha: 0.04),
       blurRadius: 8,
       offset: const Offset(0, 2),
     ),
@@ -327,7 +325,7 @@ class AppShadows {
   
   static List<BoxShadow> get medium => [
     BoxShadow(
-      color: AppColors.black.withOpacity(0.08),
+      color: AppColors.black.withValues(alpha: 0.08),
       blurRadius: 16,
       offset: const Offset(0, 4),
     ),
@@ -335,7 +333,7 @@ class AppShadows {
   
   static List<BoxShadow> get large => [
     BoxShadow(
-      color: AppColors.black.withOpacity(0.12),
+      color: AppColors.black.withValues(alpha: 0.12),
       blurRadius: 24,
       offset: const Offset(0, 8),
     ),

@@ -260,7 +260,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
                     ),
                     radius: 10000, // 10km en metros
                     useRadiusInMeter: true,
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderColor: Colors.blue,
                     borderStrokeWidth: 2,
                   ),
@@ -290,7 +290,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
+                                color: Colors.black.withValues(alpha: 0.2),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),
@@ -352,7 +352,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
+                                    color: Colors.black.withValues(alpha: 0.2),
                                     blurRadius: 4,
                                     offset: const Offset(0, 2),
                                   ),
@@ -517,7 +517,7 @@ class _AvailableRequestsPageState extends State<AvailableRequestsPage> {
                     ),
                     decoration: BoxDecoration(
                       color: Color(ServiceStates.getStateColor(request.status))
-                          .withOpacity(0.1),
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
