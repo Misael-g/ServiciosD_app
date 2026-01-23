@@ -5,6 +5,8 @@ import '../../data/models/service_request_model.dart';
 import '../../data/models/profile_model.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/constants/service_states.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/custom_widgets.dart';
 import 'create_request_page.dart';
 import 'request_detail_page.dart';
 
@@ -86,8 +88,10 @@ class _ClientHomePageState extends State<ClientHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Inicio'),
+        backgroundColor: AppColors.white,
+        title: const Text('TecniHogar'),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
@@ -98,30 +102,36 @@ class _ClientHomePageState extends State<ClientHomePage> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadData,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Tarjeta de bienvenida PERSONALIZADA
-                    _buildWelcomeCard(),
-                    const SizedBox(height: 24),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadData,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // ��� Tarjeta de bienvenida moderna
+                  _buildWelcomeCard(),
+                  const SizedBox(height: 24),
 
-                    // Servicios disponibles
-                    _buildServicesSection(),
-                    const SizedBox(height: 24),
+                  // ��� Sección de servicios
+                  const SectionHeader(
+                    title: '¿Qué servicio necesitas?',
+                    icon: Icons.build_outlined,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildServicesGrid(),
+                  const SizedBox(height: 32),
 
-                    // Solicitudes activas
-                    _buildActiveRequestsSection(),
-                  ],
-                ),
+                  // ��� Solicitudes activas
+                  SectionHeader(
+                    title: 'Solicitudes Activas',
+                    subtitle: '${_activeRequests.length} en progreso',
+                  ),
+                  const SizedBox(height: 12),
+                  _buildActiveRequestsList(),
+                ],
               ),
-      ),
+            ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final result = await Navigator.push(
@@ -142,34 +152,155 @@ class _ClientHomePageState extends State<ClientHomePage> {
   }
 
   Widget _buildWelcomeCard() {
-    return Card(
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Row(
-          children: [
-            Icon(
-              Icons.waving_hand,
-              size: 40,
-              color: Theme.of(context).colorScheme.primary,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.primaryDark,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.waving_hand,
+            size: 40,
+            color: AppColors.white,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_getGreeting()}, ${_getFirstName()}!',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.white,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  '¿Qué servicio necesitas hoy?',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${_getGreeting()}, ${_getFirstName()}!',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '¿Qué servicio necesitas hoy?',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServicesGrid() {
+    final services = [
+      {
+        'name': 'Electricista',
+        'icon': Icons.electrical_services,
+        'color': AppColors.warning
+      },
+      {'name': 'Plomero', 'icon': Icons.plumbing, 'color': AppColors.info},
+      {
+        'name': 'Carpintero',
+        'icon': Icons.carpenter,
+        'color': const Color(0xFF8B4513)
+      },
+      {
+        'name': 'Pintor',
+        'icon': Icons.format_paint,
+        'color': const Color(0xFF9B59B6)
+      },
+      {
+        'name': 'Mecánico',
+        'icon': Icons.build,
+        'color': AppColors.secondary
+      },
+      {
+        'name': 'Otros',
+        'icon': Icons.more_horiz,
+        'color': AppColors.success
+      },
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1,
+      ),
+      itemCount: services.length,
+      itemBuilder: (context, index) {
+        final service = services[index];
+        return _buildServiceCard(
+          service['name'] as String,
+          service['icon'] as IconData,
+          service['color'] as Color,
+        );
+      },
+    );
+  }
+
+  Widget _buildServiceCard(String name, IconData icon, Color color) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CreateRequestPage(preselectedService: name),
+          ),
+        ).then((result) {
+          if (result == true) {
+            _loadData();
+          }
+        });
+      },
+      borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 28, color: color),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              name,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
               ),
             ),
           ],
@@ -178,247 +309,100 @@ class _ClientHomePageState extends State<ClientHomePage> {
     );
   }
 
-  Widget _buildServicesSection() {
-    final services = [
-      {
-        'name': 'Electricista',
-        'icon': Icons.electrical_services,
-        'color': Colors.amber
+  Widget _buildActiveRequestsList() {
+    if (_activeRequests.isEmpty) {
+      return const EmptyState(
+        icon: Icons.inbox_outlined,
+        title: 'No tienes solicitudes activas',
+        message: 'Crea una nueva solicitud para comenzar',
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _activeRequests.length,
+      itemBuilder: (context, index) {
+        final request = _activeRequests[index];
+        return _buildRequestCard(request);
       },
-      {'name': 'Plomero', 'icon': Icons.plumbing, 'color': Colors.blue},
-      {'name': 'Carpintero', 'icon': Icons.carpenter, 'color': Colors.brown},
-      {'name': 'Pintor', 'icon': Icons.format_paint, 'color': Colors.purple},
-      {'name': 'Mecánico', 'icon': Icons.build, 'color': Colors.grey},
-      {'name': 'Otros', 'icon': Icons.more_horiz, 'color': Colors.green},
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Servicios Disponibles',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 16),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1,
-          ),
-          itemCount: services.length,
-          itemBuilder: (context, index) {
-            final service = services[index];
-            return InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => CreateRequestPage(
-                      preselectedService: service['name'] as String,
-                    ),
-                  ),
-                ).then((result) {
-                  if (result == true) {
-                    _loadData();
-                  }
-                });
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Card(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      service['icon'] as IconData,
-                      size: 32,
-                      color: service['color'] as Color,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      service['name'] as String,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActiveRequestsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Solicitudes Activas',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            if (_activeRequests.isNotEmpty)
-              TextButton(
-                onPressed: () {
-                  // Cambiar a tab de solicitudes
-                  // TODO: Implementar navegación
-                },
-                child: const Text('Ver Todas'),
-              ),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        if (_activeRequests.isEmpty)
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.inbox_outlined,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No tienes solicitudes activas',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Crea una nueva solicitud para comenzar',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount:
-                _activeRequests.length > 3 ? 3 : _activeRequests.length,
-            itemBuilder: (context, index) {
-              final request = _activeRequests[index];
-              return _buildRequestCard(request);
-            },
-          ),
-      ],
     );
   }
 
   Widget _buildRequestCard(ServiceRequestModel request) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => RequestDetailPage(requestId: request.id),
-            ),
-          ).then((_) => _loadData());
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      request.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          Color(ServiceStates.getStateColor(request.status))
-                              .withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      ServiceStates.getDisplayName(request.status),
-                      style: TextStyle(
-                        color: Color(ServiceStates.getStateColor(
-                            request.status)),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                request.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(Icons.work_outline, size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 4),
-                  Text(
-                    request.serviceType,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(Icons.location_on_outlined,
-                      size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      request.address,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RequestDetailPage(requestId: request.id),
           ),
+        ).then((_) => _loadData());
+      },
+      borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    request.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                StatusBadge(
+                  label: ServiceStates.getDisplayName(request.status),
+                  color: Color(ServiceStates.getStateColor(request.status)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              request.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    request.serviceType,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                LocationBadge(location: request.address),
+              ],
+            ),
+          ],
         ),
       ),
     );

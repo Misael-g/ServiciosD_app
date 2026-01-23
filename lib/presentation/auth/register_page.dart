@@ -1,5 +1,7 @@
+// lib/presentation/auth/register_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/utils/validators.dart';
 import '../../core/constants/verification_states.dart';
@@ -32,7 +34,6 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _obscureConfirmPassword = true;
   String? _selectedRole;
 
-  // 🆕 Especialidades para técnicos
   final List<String> _availableSpecialties = [
     'Electricista',
     'Plomero',
@@ -73,7 +74,6 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // 🆕 Validar especialidades para técnicos
     if (_selectedRole == UserRoles.technician && _selectedSpecialties.isEmpty) {
       SnackbarHelper.showError(
         context,
@@ -85,15 +85,6 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = true);
 
     try {
-      print('📝 [REGISTER] Iniciando registro');
-      print('   Email: ${_emailController.text.trim()}');
-      print('   Nombre: ${_fullNameController.text.trim()}');
-      print('   Rol: $_selectedRole');
-      print('   Teléfono: ${_phoneController.text.trim()}');
-      if (_selectedRole == UserRoles.technician) {
-        print('   Especialidades: $_selectedSpecialties');
-      }
-      
       final authRepository = context.read<AuthRepository>();
       
       await authRepository.signUp(
@@ -104,12 +95,10 @@ class _RegisterPageState extends State<RegisterPage> {
         phone: _phoneController.text.trim().isEmpty
             ? null 
             : _phoneController.text.trim(),
-        specialties: _selectedRole == UserRoles.technician // 🆕 AGREGAR
+        specialties: _selectedRole == UserRoles.technician
             ? _selectedSpecialties
             : null,
       );
-
-      print('✅ [REGISTER] Registro exitoso');
 
       if (mounted) {
         final message = _selectedRole == UserRoles.technician
@@ -118,7 +107,6 @@ class _RegisterPageState extends State<RegisterPage> {
             
         SnackbarHelper.showSuccess(context, message);
         
-        // Volver al login
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const LoginPage()),
           (route) => false,
@@ -126,12 +114,9 @@ class _RegisterPageState extends State<RegisterPage> {
       }
       
     } catch (e) {
-      print('❌ [REGISTER] Error: $e');
-      
       if (mounted) {
         String errorMessage = 'Error al registrar: ';
         
-        // Mejorar mensajes de error
         if (e.toString().contains('User already registered') || 
             e.toString().contains('already been registered')) {
           errorMessage = 'Este email ya está registrado. Intenta iniciar sesión.';
@@ -157,8 +142,11 @@ class _RegisterPageState extends State<RegisterPage> {
     final isTechnician = _selectedRole == UserRoles.technician;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
+        backgroundColor: AppColors.white,
         title: const Text('Crear Cuenta'),
+        centerTitle: true,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -168,36 +156,67 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Indicador de rol seleccionado
+                // Role Selector
                 if (_selectedRole != null)
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: _selectedRole == UserRoles.client
-                          ? Colors.blue[50]
-                          : Colors.orange[50],
+                      gradient: LinearGradient(
+                        colors: _selectedRole == UserRoles.client
+                            ? [Colors.blue.shade50, Colors.blue.shade100]
+                            : [AppColors.primary.withOpacity(0.1), AppColors.primary.withOpacity(0.2)],
+                      ),
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _selectedRole == UserRoles.client
+                            ? Colors.blue.shade200
+                            : AppColors.primary.withOpacity(0.3),
+                        width: 1.5,
+                      ),
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          _selectedRole == UserRoles.client
-                              ? Icons.person
-                              : Icons.build,
-                          color: _selectedRole == UserRoles.client
-                              ? Colors.blue
-                              : Colors.orange,
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            _selectedRole == UserRoles.client
+                                ? Icons.person
+                                : Icons.build,
+                            color: _selectedRole == UserRoles.client
+                                ? Colors.blue
+                                : AppColors.primary,
+                            size: 28,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Text(
-                            'Registrándote como ${UserRoles.getDisplayName(_selectedRole!)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: _selectedRole == UserRoles.client
-                                  ? Colors.blue[900]
-                                  : Colors.orange[900],
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Registrándote como',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                UserRoles.getDisplayName(_selectedRole!),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: _selectedRole == UserRoles.client
+                                      ? Colors.blue.shade900
+                                      : AppColors.secondary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         TextButton(
@@ -227,15 +246,21 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                     icon: const Icon(Icons.person_add),
                     label: const Text('Seleccionar Rol'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
                   ),
                 
                 const SizedBox(height: 24),
 
-                // Campo nombre completo
+                // Full Name
                 TextFormField(
                   controller: _fullNameController,
                   decoration: const InputDecoration(
                     labelText: 'Nombre Completo',
+                    hintText: 'Juan Pérez',
                     prefixIcon: Icon(Icons.person_outline),
                   ),
                   validator: Validators.validateFullName,
@@ -244,12 +269,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Campo email
+                // Email
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
                     labelText: 'Email',
+                    hintText: 'tu@email.com',
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
                   validator: Validators.validateEmail,
@@ -257,12 +283,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Campo teléfono
+                // Phone
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
                     labelText: isTechnician ? 'Teléfono *' : 'Teléfono',
+                    hintText: '0999123456',
                     prefixIcon: const Icon(Icons.phone_outlined),
                     helperText: isTechnician ? 'Obligatorio para técnicos' : null,
                   ),
@@ -278,13 +305,14 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Campo contraseña
+                // Password
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: 'Contraseña',
-                    prefixIcon: const Icon(Icons.lock_outlined),
+                    hintText: '••••••••',
+                    prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
@@ -303,13 +331,14 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Campo confirmar contraseña
+                // Confirm Password
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
                   decoration: InputDecoration(
                     labelText: 'Confirmar Contraseña',
-                    prefixIcon: const Icon(Icons.lock_outlined),
+                    hintText: '••••••••',
+                    prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureConfirmPassword
@@ -331,27 +360,34 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // 🆕 ESPECIALIDADES (Solo para técnicos)
+                // Specialties (Technicians only)
                 if (isTechnician) ...[
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.blue[50],
+                      color: AppColors.primary.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue[200]!),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.3),
+                        width: 1.5,
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.work_outline, color: Colors.blue[700]),
+                            Icon(
+                              Icons.work_outline,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
-                            Text(
+                            const Text(
                               'Especialidades *',
                               style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue[900],
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.secondary,
                                 fontSize: 16,
                               ),
                             ),
@@ -359,10 +395,10 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Selecciona tus áreas de especialidad. Esto ayudará a los clientes a encontrarte.',
+                          'Selecciona tus áreas de especialidad',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue[900],
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                         if (_selectedSpecialties.isEmpty)
@@ -372,8 +408,8 @@ class _RegisterPageState extends State<RegisterPage> {
                               '⚠️ Debes seleccionar al menos una',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.red[700],
-                                fontWeight: FontWeight.bold,
+                                color: AppColors.error,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -383,7 +419,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
                   const SizedBox(height: 16),
 
-                  // Chips de especialidades
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -404,15 +439,23 @@ class _RegisterPageState extends State<RegisterPage> {
                                   }
                                 });
                               },
-                        backgroundColor: Colors.grey.shade200,
-                        selectedColor: Colors.orange.shade100,
-                        checkmarkColor: Colors.orange.shade900,
+                        backgroundColor: AppColors.white,
+                        selectedColor: AppColors.primary.withOpacity(0.15),
+                        checkmarkColor: AppColors.primary,
+                        side: BorderSide(
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.border,
+                          width: isSelected ? 1.5 : 1,
+                        ),
                         labelStyle: TextStyle(
                           color: isSelected
-                              ? Colors.orange.shade900
-                              : Colors.grey.shade700,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
+                              ? AppColors.primary
+                              : AppColors.textPrimary,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                          fontSize: 13,
                         ),
                       );
                     }).toList(),
@@ -423,21 +466,27 @@ class _RegisterPageState extends State<RegisterPage> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green.shade200),
+                        color: AppColors.success.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.success.withOpacity(0.3),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.check_circle, color: Colors.green[700], size: 20),
+                          Icon(
+                            Icons.check_circle,
+                            color: AppColors.success,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Has seleccionado ${_selectedSpecialties.length} especialidad(es)',
+                              '${_selectedSpecialties.length} especialidad(es) seleccionada(s)',
                               style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.green[900],
-                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppColors.success,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -449,40 +498,48 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(height: 24),
                 ],
 
-                // Información para técnicos
+                // Technician Info
                 if (isTechnician)
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.orange[50],
+                      color: AppColors.info.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.orange[200]!),
+                      border: Border.all(
+                        color: AppColors.info.withOpacity(0.2),
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.info_outline, color: Colors.orange[700]),
+                            Icon(
+                              Icons.info_outline,
+                              color: AppColors.info,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
-                            Text(
+                            const Text(
                               'Verificación de Técnico',
                               style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.orange[900],
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.secondary,
+                                fontSize: 14,
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Después de registrarte, deberás subir los siguientes documentos:\n'
+                          'Después de registrarte, deberás subir:\n'
                           '• Cédula de identidad (frontal y posterior)\n'
                           '• Certificado profesional o técnico\n\n'
-                          'Solo podrás enviar cotizaciones una vez que tu perfil sea verificado.',
+                          'Solo podrás enviar cotizaciones una vez verificado.',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.orange[900],
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                            height: 1.5,
                           ),
                         ),
                       ],
@@ -491,27 +548,37 @@ class _RegisterPageState extends State<RegisterPage> {
                 
                 const SizedBox(height: 24),
 
-                // Botón de registro
-                ElevatedButton(
-                  onPressed: _isLoading || _selectedRole == null
-                      ? null
-                      : _handleRegister,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                // Register Button
+                SizedBox(
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _isLoading || _selectedRole == null
+                        ? null
+                        : _handleRegister,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.white,
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.white,
+                              ),
+                            ),
+                          )
+                        : const Text(
+                            'Crear Cuenta',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
                             ),
                           ),
-                        )
-                      : const Text('Crear Cuenta'),
+                  ),
                 ),
               ],
             ),

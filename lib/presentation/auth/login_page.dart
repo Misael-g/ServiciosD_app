@@ -1,5 +1,7 @@
+// lib/presentation/auth/login_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/utils/validators.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -32,8 +34,6 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      print('🔐 [LOGIN] Iniciando login...');
-      
       final authRepository = context.read<AuthRepository>();
       
       await authRepository.signIn(
@@ -41,21 +41,15 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text,
       );
 
-      print('✅ [LOGIN] Login exitoso');
-
       if (mounted) {
-        SnackbarHelper.showSuccess(context, '¡Bienvenido!');
+        SnackbarHelper.showSuccess(context, '¡Bienvenido a TecniHogar!');
         
-        // CORRECCIÓN: Usar Navigator.pushReplacementNamed en lugar de pushReplacement
-        // Esto asegura que el AuthWrapper se reconstruya correctamente
         Navigator.of(context).pushNamedAndRemoveUntil(
           '/',
-          (route) => false, // Eliminar todas las rutas anteriores
+          (route) => false,
         );
       }
     } catch (e) {
-      print('❌ [LOGIN] Error: $e');
-      
       if (mounted) {
         SnackbarHelper.showError(
           context,
@@ -72,6 +66,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -82,57 +77,97 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo o título
-                  Icon(
-                    Icons.build_circle,
-                    size: 100,
-                    color: Theme.of(context).colorScheme.primary,
+                  // Logo Container
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.home_repair_service_rounded,
+                      size: 80,
+                      color: AppColors.primary,
+                    ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   
-                  Text(
-                    'Servicios Técnicos',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                  // Title
+                  const Text(
+                    'TecniHogar',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.secondary,
+                      letterSpacing: -1,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   
-                  Text(
-                    'Inicia sesión para continuar',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                  const Text(
+                    'Técnicos a domicilio con un click',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 48),
 
-                  // Campo de email
+                  // Email Field
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email_outlined),
+                    decoration: InputDecoration(
+                      labelText: 'Correo electrónico',
+                      hintText: 'tu@email.com',
+                      prefixIcon: Container(
+                        margin: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.email_outlined,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
                     ),
                     validator: Validators.validateEmail,
                     enabled: !_isLoading,
                   ),
                   const SizedBox(height: 16),
 
-                  // Campo de contraseña
+                  // Password Field
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       labelText: 'Contraseña',
-                      prefixIcon: const Icon(Icons.lock_outlined),
+                      hintText: '••••••••',
+                      prefixIcon: Container(
+                        margin: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.lock_outline,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
                               ? Icons.visibility_outlined
                               : Icons.visibility_off_outlined,
+                          color: AppColors.textSecondary,
                         ),
                         onPressed: () {
                           setState(() {
@@ -144,54 +179,121 @@ class _LoginPageState extends State<LoginPage> {
                     validator: Validators.validatePassword,
                     enabled: !_isLoading,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 12),
 
-                  // Botón de iniciar sesión
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          )
-                        : const Text('Iniciar Sesión'),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Botón de registro
-                  OutlinedButton(
-                    onPressed: _isLoading
-                        ? null
-                        : () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const RegisterPage(),
-                              ),
-                            );
-                          },
-                    child: const Text('Crear Cuenta'),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Olvidé mi contraseña
-                  TextButton(
-                    onPressed: _isLoading ? null : _showForgotPasswordDialog,
-                    child: Text(
-                      '¿Olvidaste tu contraseña?',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
+                  // Forgot Password
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _isLoading ? null : _showForgotPasswordDialog,
+                      child: const Text(
+                        '¿Olvidaste tu contraseña?',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Login Button
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _handleLogin,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppColors.white,
+                                ),
+                              ),
+                            )
+                          : const Text(
+                              'Iniciar Sesión',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Register Button
+                  SizedBox(
+                    height: 56,
+                    child: OutlinedButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterPage(),
+                                ),
+                              );
+                            },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.secondary,
+                        side: const BorderSide(
+                          color: AppColors.border,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Crear Cuenta Nueva',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Footer
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 1,
+                        color: AppColors.border,
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'Confianza y Calidad',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 40,
+                        height: 1,
+                        color: AppColors.border,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -208,14 +310,31 @@ class _LoginPageState extends State<LoginPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Recuperar Contraseña'),
+        backgroundColor: AppColors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          'Recuperar Contraseña',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: AppColors.secondary,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña.',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             TextFormField(
               controller: emailController,
               keyboardType: TextInputType.emailAddress,
@@ -256,6 +375,10 @@ class _LoginPageState extends State<LoginPage> {
                 }
               }
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+            ),
             child: const Text('Enviar'),
           ),
         ],

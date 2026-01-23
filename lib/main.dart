@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/config/supabase_config.dart';
+import 'core/theme/app_theme.dart';
 import 'data/datasources/auth_remote_ds.dart';
 import 'data/datasources/profiles_remote_ds.dart';
 import 'data/repositories/auth_repository_impl.dart';
@@ -36,38 +37,9 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'Servicios Técnicos',
+        title: 'TecniHogar',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blue,
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            filled: true,
-            fillColor: Colors.grey[50],
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 32,
-                vertical: 16,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
-        // CORRECCIÓN: Usar routes en lugar de solo home
+        theme: AppTheme.lightTheme,
         initialRoute: '/',
         routes: {
           '/': (context) => const AuthWrapper(),

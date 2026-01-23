@@ -1,11 +1,13 @@
+// lib/presentation/admin/verification_detail_page.dart
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/custom_widgets.dart';
 import '../../data/datasources/profiles_remote_ds.dart';
 import '../../data/datasources/storage_remote_ds.dart';
 import '../../data/models/profile_model.dart';
 import '../../core/utils/snackbar_helper.dart';
 
-/// Pantalla de detalle de verificación (Admin)
 class VerificationDetailPage extends StatefulWidget {
   final String technicianId;
 
@@ -28,7 +30,6 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
   bool _isLoading = true;
   bool _isProcessing = false;
 
-  // Lista de tipos de documentos
   static const List<String> _documentTypes = [
     'id_front',
     'id_back',
@@ -51,10 +52,8 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Cargar perfil del técnico
       final technician = await _profilesDS.getProfileById(widget.technicianId);
 
-      // Cargar URLs de documentos
       final documentUrls = <String, String?>{};
       for (final docType in _documentTypes) {
         try {
@@ -153,11 +152,11 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
       context,
       MaterialPageRoute(
         builder: (_) => Scaffold(
+          backgroundColor: AppColors.black,
           appBar: AppBar(
-            backgroundColor: Colors.black,
-            iconTheme: const IconThemeData(color: Colors.white),
+            backgroundColor: AppColors.black,
+            iconTheme: const IconThemeData(color: AppColors.white),
           ),
-          backgroundColor: Colors.black,
           body: Center(
             child: InteractiveViewer(
               child: CachedNetworkImage(
@@ -187,84 +186,131 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
+        backgroundColor: AppColors.white,
         title: const Text('Verificación de Técnico'),
+        centerTitle: true,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // Información del técnico
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          backgroundImage: _technician?.profilePictureUrl != null
-                              ? NetworkImage(_technician!.profilePictureUrl!)
-                              : null,
-                          child: _technician?.profilePictureUrl == null
-                              ? Text(
-                                  _technician?.fullName[0].toUpperCase() ?? '?',
-                                  style: const TextStyle(
-                                    fontSize: 32,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : null,
+                // Technician Info Card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+                    border: Border.all(color: AppColors.border),
+                    boxShadow: AppShadows.small,
+                  ),
+                  child: Column(
+                    children: [
+                      ProfileAvatar(
+                        name: _technician?.fullName ?? '?',
+                        imageUrl: _technician?.profilePictureUrl,
+                        radius: 48,
+                        showBorder: true,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _technician?.fullName ?? '',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                          letterSpacing: -0.5,
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _technician?.fullName ?? '',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _technician?.email ?? '',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
                         ),
+                      ),
+                      if (_technician?.phone != null) ...[
                         const SizedBox(height: 4),
-                        Text(
-                          _technician?.email ?? '',
-                          style: TextStyle(color: Colors.grey[600]),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.phone_outlined,
+                              size: 16,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _technician!.phone!,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
-                        if (_technician?.phone != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            _technician!.phone!,
-                            style: TextStyle(color: Colors.grey[600]),
-                          ),
-                        ],
-                        const SizedBox(height: 16),
-                        if (_technician?.specialties != null &&
-                            _technician!.specialties!.isNotEmpty)
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: _technician!.specialties!
-                                .map((specialty) => Chip(
-                                      label: Text(specialty),
-                                      avatar: const Icon(Icons.work, size: 16),
-                                    ))
-                                .toList(),
-                          ),
                       ],
-                    ),
+                      if (_technician?.specialties != null &&
+                          _technician!.specialties!.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        const Divider(height: 1),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: _technician!.specialties!
+                              .map((specialty) => Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: AppColors.primary.withOpacity(0.3),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.verified,
+                                          size: 16,
+                                          color: AppColors.primary,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          specialty,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 const SizedBox(height: 24),
 
-                // Documentos
-                Text(
-                  'Documentos de Verificación',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                // Documents Section
+                const SectionHeader(
+                  title: 'Documentos de Verificación',
+                  icon: Icons.folder_outlined,
                 ),
                 const SizedBox(height: 16),
 
-                // Iterar sobre los tipos de documentos
                 ..._documentTypes.map((docType) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -278,53 +324,76 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
 
                 const SizedBox(height: 24),
 
-                // Notas
-                TextField(
-                  controller: _notesController,
-                  maxLines: 4,
-                  decoration: const InputDecoration(
-                    labelText: 'Notas (opcional)',
-                    hintText: 'Agregar comentarios sobre la verificación...',
-                    border: OutlineInputBorder(),
+                // Notes Section
+                const SectionHeader(
+                  title: 'Notas de Verificación',
+                  subtitle: 'Opcional - visible para el técnico',
+                  icon: Icons.note_outlined,
+                ),
+                const SizedBox(height: 16),
+
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(AppBorderRadius.md),
+                    border: Border.all(color: AppColors.border),
                   ),
-                  enabled: !_isProcessing,
+                  child: TextField(
+                    controller: _notesController,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      hintText: 'Agregar comentarios sobre la verificación...',
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.all(16),
+                    ),
+                    enabled: !_isProcessing,
+                  ),
                 ),
                 const SizedBox(height: 24),
 
-                // Botones de acción
+                // Action Buttons
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _isProcessing ? null : _rejectVerification,
-                        icon: const Icon(Icons.close),
-                        label: const Text('Rechazar'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: SizedBox(
+                        height: 56,
+                        child: OutlinedButton.icon(
+                          onPressed: _isProcessing ? null : _rejectVerification,
+                          icon: const Icon(Icons.close),
+                          label: const Text('Rechazar'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.error,
+                            side: const BorderSide(
+                              color: AppColors.error,
+                              width: 1.5,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _isProcessing ? null : _approveVerification,
-                        icon: _isProcessing
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor:
-                                      AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : const Icon(Icons.check),
-                        label: const Text('Aprobar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: SizedBox(
+                        height: 56,
+                        child: ElevatedButton.icon(
+                          onPressed: _isProcessing ? null : _approveVerification,
+                          icon: _isProcessing
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.check),
+                          label: const Text('Aprobar'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            foregroundColor: AppColors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -336,78 +405,115 @@ class _VerificationDetailPageState extends State<VerificationDetailPage> {
   }
 
   Widget _buildDocumentCard(String title, String type, String? url) {
-    return Card(
-      child: InkWell(
-        onTap: url != null ? () => _viewImageFullscreen(url) : null,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
+    return InkWell(
+      onTap: url != null ? () => _viewImageFullscreen(url) : null,
+      borderRadius: BorderRadius.circular(AppBorderRadius.md),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(AppBorderRadius.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: url != null
+                            ? AppColors.success.withOpacity(0.1)
+                            : AppColors.error.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        url != null ? Icons.check_circle : Icons.warning,
+                        color: url != null ? AppColors.success : AppColors.error,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
                       title,
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         fontSize: 16,
+                        color: AppColors.textPrimary,
                       ),
                     ),
+                  ],
+                ),
+                if (url != null)
+                  const Icon(
+                    Icons.visibility,
+                    color: AppColors.primary,
+                    size: 20,
                   ),
-                  if (url != null)
-                    const Icon(Icons.visibility, color: Colors.blue),
-                ],
-              ),
-              const SizedBox(height: 12),
-              if (url != null)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: url,
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      height: 200,
-                      color: Colors.grey[200],
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      height: 200,
-                      color: Colors.grey[200],
-                      child: const Center(
-                        child: Icon(Icons.error, color: Colors.red),
-                      ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (url != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: CachedNetworkImage(
+                  imageUrl: url,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    height: 180,
+                    color: AppColors.background,
+                    child: const Center(
+                      child: CircularProgressIndicator(),
                     ),
                   ),
-                )
-              else
-                Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.file_present, size: 48, color: Colors.grey[400]),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Documento no disponible',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      ],
+                  errorWidget: (context, url, error) => Container(
+                    height: 180,
+                    color: AppColors.background,
+                    child: const Center(
+                      child: Icon(Icons.error, color: AppColors.error),
                     ),
                   ),
                 ),
-            ],
-          ),
+              )
+            else
+              Container(
+                height: 180,
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppColors.border,
+                    style: BorderStyle.solid,
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.file_present,
+                        size: 48,
+                        color: AppColors.textSecondary.withOpacity(0.5),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Documento no disponible',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
