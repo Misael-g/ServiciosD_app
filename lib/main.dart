@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'core/config/supabase_config.dart';
-import 'core/theme/app_theme.dart';
 import 'data/datasources/auth_remote_ds.dart';
 import 'data/datasources/profiles_remote_ds.dart';
 import 'data/repositories/auth_repository_impl.dart';
@@ -12,11 +14,67 @@ import 'presentation/client/main_navigation.dart';
 import 'presentation/technician/main_navigation.dart';
 import 'presentation/admin/main_navigation.dart';
 
+// ============================================
+// HANDLER BACKGROUND (DEBE ESTAR AQUI ARRIBA)
+// ============================================
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print('🔔 [BACKGROUND] Mensaje: ${message.notification?.title}');
+}
+
+// Variable temporal para el token
+String? _tempFcmToken;
+String? get tempFcmToken => _tempFcmToken;
+
+// ============================================
+// MAIN
+// ============================================
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializar Supabase
-  await SupabaseConfig.initialize();
+  try {
+    // 1. Cargar .env
+    await dotenv.load(fileName: ".env");
+    print('✅ .env cargado');
+
+    // 2. Inicializar Firebase
+    await Firebase.initializeApp();
+    print('✅ Firebase inicializado');
+
+    // 3. Configurar handler de background
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    print('✅ Background handler configurado');
+
+    // 4. Inicializar Supabase
+    await SupabaseConfig.initialize();
+    print('✅ Supabase inicializado');
+
+    // 5. Solicitar permisos de notificaciones
+    final messaging = FirebaseMessaging.instance;
+    final settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print('✅ Permisos de notificaciones concedidos');
+      
+      // Obtener token FCM
+      final token = await messaging.getToken();
+      print('📱 FCM Token obtenido: ${token?.substring(0, 20)}...');
+      
+      // IMPORTANTE: Guardar en variable temporal
+      // Se guardará en BD después del login
+      _tempFcmToken = token;
+    } else {
+      print('⚠️ Permisos de notificaciones denegados');
+    }
+
+  } catch (e) {
+    print('❌ Error en inicialización: $e');
+  }
 
   runApp(const MyApp());
 }
@@ -37,9 +95,12 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'TecniHogar',
+        title: 'ServiciosD',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
+        theme: ThemeData(
+          primarySwatch: Colors.orange,
+          useMaterial3: true,
+        ),
         initialRoute: '/',
         routes: {
           '/': (context) => const AuthWrapper(),

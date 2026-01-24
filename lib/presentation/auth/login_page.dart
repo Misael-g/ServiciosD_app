@@ -1,9 +1,12 @@
 // lib/presentation/auth/login_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../core/utils/validators.dart';
+import '../../core/services/notification_service.dart';
+import '../../core/config/supabase_config.dart';
 import '../../domain/repositories/auth_repository.dart';
 import 'register_page.dart';
 
@@ -42,6 +45,13 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (mounted) {
+        print('✅ Login exitoso');
+        
+        // ============================================
+        // GUARDAR FCM TOKEN DESPUÉS DEL LOGIN
+        // ============================================
+        await _saveFcmToken();
+
         SnackbarHelper.showSuccess(context, '¡Bienvenido a TecniHogar!');
         
         Navigator.of(context).pushNamedAndRemoveUntil(
@@ -60,6 +70,44 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  // ============================================
+  // GUARDAR FCM TOKEN DESPUÉS DEL LOGIN
+  // ============================================
+  Future<void> _saveFcmToken() async {
+    try {
+      print('💾 Guardando FCM token...');
+
+      // Inicializar servicio de notificaciones
+      await NotificationService().initialize();
+
+      final messaging = FirebaseMessaging.instance;
+      final token = await messaging.getToken();
+
+      if (token != null) {
+        // Obtener ID del usuario actual
+        final userId = SupabaseConfig.currentUserId;
+        
+        if (userId != null) {
+          // Guardar en BD
+          await SupabaseConfig.client
+              .from('profiles')
+              .update({'fcm_token': token})
+              .eq('id', userId);
+          
+          print('✅ FCM token guardado correctamente');
+          print('📱 Token: ${token.substring(0, 20)}...');
+        } else {
+          print('⚠️ No se pudo obtener el ID del usuario');
+        }
+      } else {
+        print('⚠️ No se pudo obtener FCM token');
+      }
+    } catch (e) {
+      print('❌ Error guardando FCM token: $e');
+      // No bloqueamos el login si falla esto
     }
   }
 
