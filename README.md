@@ -6,7 +6,6 @@
 ![Dart](https://img.shields.io/badge/Dart-3.5.0-blue?logo=dart)
 ![Supabase](https://img.shields.io/badge/Supabase-Backend-green?logo=supabase)
 ![Firebase](https://img.shields.io/badge/Firebase-FCM-orange?logo=firebase)
-![License](https://img.shields.io/badge/License-MIT-yellow)
 
 **Aplicación móvil que conecta clientes con técnicos especializados en tiempo real**
 
