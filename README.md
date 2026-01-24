@@ -363,13 +363,6 @@ flutter build web --release
 
 ---
 
-## 📄 Licencia
-
-Este proyecto está bajo la licencia MIT. Ver [LICENSE](LICENSE) para detalles.
-
-
----
-
 ## 🙏 Agradecimientos
 
 - [Flutter Team](https://flutter.dev)
