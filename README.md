@@ -1,4 +1,4 @@
-# 🛠️ ServiciosD - Plataforma de Servicios Técnicos
+# 🛠️ TecniHogar - Plataforma de Servicios Técnicos
 
 <div align="center">
 
@@ -18,7 +18,7 @@
 
 ## 📱 Sobre el Proyecto
 
-**ServiciosD** es una plataforma móvil multiplataforma (Android/iOS/Web) que facilita la conexión entre personas que necesitan servicios técnicos a domicilio y profesionales verificados cercanos. 
+**TecniHogar** es una plataforma móvil multiplataforma (Android/iOS/Web) que facilita la conexión entre personas que necesitan servicios técnicos a domicilio y profesionales verificados cercanos. 
 
 ### 🎯 Problema
 
@@ -367,14 +367,6 @@ flutter build web --release
 
 Este proyecto está bajo la licencia MIT. Ver [LICENSE](LICENSE) para detalles.
 
----
-
-## 👨‍💻 Autor
-
-**Misael G.**
-
-- GitHub: [@misael-g](https://github.com/misael-g)
-- Email: misael@serviciosd.com
 
 ---
 
