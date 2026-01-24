@@ -282,11 +282,11 @@ CREATE POLICY "clients_view_own_requests"
 
 ### Cliente
 
-<img src="docs/screenshots/client-home.png" width="200"/> <img src="docs/screenshots/create-request.png" width="200"/> <img src="docs/screenshots/quotations.png" width="200"/>
+![WhatsApp Image 2026-01-24 at 1 56 54 PM (1)](https://github.com/user-attachments/assets/f8357ff1-202d-456c-b085-fe3fb56d1d47)
 
 ### Técnico
 
-<img src="docs/screenshots/tech-map.png" width="200"/> <img src="docs/screenshots/send-quote.png" width="200"/> <img src="docs/screenshots/profile.png" width="200"/>
+![WhatsApp Image 2026-01-24 at 1 56 54 PM](https://github.com/user-attachments/assets/72232b28-ebdf-4cad-837a-b14c59143281)
 
 </div>
 
