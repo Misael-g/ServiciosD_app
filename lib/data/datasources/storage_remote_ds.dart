@@ -36,7 +36,7 @@ class StorageRemoteDataSource {
       // Subir archivo
       await _supabase.storage
           .from(verificationDocsBucket)
-          .upload(path, file, fileOptions: const FileOptions(upsert: true));
+          .upload(path, file);
 
       // Obtener URL del archivo
       final url = _supabase.storage
@@ -202,7 +202,7 @@ class StorageRemoteDataSource {
 
       await _supabase.storage
           .from(profilePicturesBucket)
-          .upload(path, file, fileOptions: const FileOptions(upsert: true));
+          .upload(path, file);
 
       // URL pública (el bucket es público)
       final url = _supabase.storage
